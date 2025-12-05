@@ -1,33 +1,46 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import plans from "../plans";
-
-const enhancedUser = {
-  ...user,
-  planDetails: plans[user.plan]
-};
+import plans from "../pages/Plans"; // اگر اسم فایل plans.js است
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
+  // اضافه کردن planDetails به کاربر
+  const enhanceUser = (userObj) => {
+    if (!userObj) return null;
+
+    return {
+      ...userObj,
+      planDetails: plans[userObj.plan] || plans.free
+    };
+  };
+
   useEffect(() => {
     const savedUser = localStorage.getItem("ashkanai_user");
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsed = JSON.parse(savedUser);
+      setUser(enhanceUser(parsed));
     }
   }, []);
 
   const register = (info) => {
     const users = JSON.parse(localStorage.getItem("ashkanai_users")) || [];
-    users.push(info);
+
+    // اگر پلن مشخص نکرده، پیش‌فرض free
+    const newUser = { ...info, plan: "free" };
+
+    users.push(newUser);
+
     localStorage.setItem("ashkanai_users", JSON.stringify(users));
-    localStorage.setItem("ashkanai_user", JSON.stringify(info));
-    setUser(info);
+    localStorage.setItem("ashkanai_user", JSON.stringify(newUser));
+
+    setUser(enhanceUser(newUser));
   };
 
   const login = (email, password) => {
     const users = JSON.parse(localStorage.getItem("ashkanai_users")) || [];
+
     const found = users.find(
       (u) => u.email === email && u.password === password
     );
@@ -35,7 +48,8 @@ export function AuthProvider({ children }) {
     if (!found) return false;
 
     localStorage.setItem("ashkanai_user", JSON.stringify(found));
-    setUser(found);
+    setUser(enhanceUser(found));
+
     return true;
   };
 
