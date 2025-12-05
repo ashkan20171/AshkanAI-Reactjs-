@@ -19,13 +19,14 @@ export default function Chat() {
   const { user } = useAuth();
   const { memory, setMemory } = useMemory();
 
+  // Persona Context
   const { personas, activePersona, setActivePersona } = usePersona();
-  const persona = personas.find(p => p.id === activePersona);
+  const persona = personas.find((p) => p.id === activePersona);
 
+  // Guest mode
   const isGuest = !user;
   const guestLimit = 10;
 
-  // Guest chat
   const [guestMessages, setGuestMessages] = useState(() => {
     if (!isGuest) return [];
     const saved = localStorage.getItem("ashkanai_guest_chat");
@@ -54,130 +55,115 @@ export default function Chat() {
 
   const chatEndRef = useRef(null);
 
-  // Always scroll down
+  // Scroll always
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [guestMessages, chats]);
 
   // Memory extraction
   useEffect(() => {
-    const text = input.toLowerCase();
-
-    if (text.includes("my name is")) {
+    const t = input.toLowerCase();
+    if (t.includes("my name is")) {
       const name = input.split("is")[1]?.trim();
-      if (name) setMemory(prev => ({ ...prev, name }));
+      if (name) setMemory((prev) => ({ ...prev, name }));
     }
   }, [input]);
 
-  // ---------------------------
-  // Update chat messages
-  // ---------------------------
-  const updateChat = msgs => {
-    setChats(prev =>
-      prev.map(c =>
+  // ------------------------------------
+  // UPDATE LOGGED-IN CHAT
+  // ------------------------------------
+  const updateChat = (msgs) => {
+    setChats((prev) => {
+      const updated = prev.map((c) =>
         c.id === activeChat ? { ...c, messages: msgs } : c
-      )
-    );
+      );
 
-    localStorage.setItem("ashkanai_chats", JSON.stringify(chats));
+      localStorage.setItem("ashkanai_chats", JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  // ---------------------------
-  // File Upload
-  // ---------------------------
-  const sendImage = file => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const imgMsg = { from: "user", type: "image", url: reader.result };
-
-      if (isGuest) {
-        setGuestMessages(p => [...p, imgMsg]);
-      } else {
-        const chat = chats.find(c => c.id === activeChat);
-        updateChat([...chat.messages, imgMsg]);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // ---------------------------
+  // ------------------------------------
   // SEND MESSAGE
-  // ---------------------------
+  // ------------------------------------
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    // Smart commands
+    // Commands
     if (input.startsWith("/")) {
       const [cmd, ...rest] = input.slice(1).split(" ");
       const text = rest.join(" ");
 
       if (plugins[cmd]) {
-        runPlugin(cmd, text);
+        const result = plugins[cmd](text);
+        if (isGuest) {
+          setGuestMessages((p) => [...p, { from: "ai", text: result }]);
+        } else {
+          const chat = chats.find((c) => c.id === activeChat);
+          updateChat([...chat.messages, { from: "ai", text: result }]);
+        }
         setInput("");
         return;
       }
     }
 
-    // Guest Mode
+    // ------------------ Guest ------------------
     if (isGuest) {
-      const count = guestMessages.filter(m => m.from === "user").length;
+      const count = guestMessages.filter((m) => m.from === "user").length;
 
       if (count >= guestLimit) {
-        setGuestMessages(p => [...p, { from: "ai", text: dict.guest_limit }]);
+        setGuestMessages((p) => [...p, { from: "ai", text: dict.guest_limit }]);
         return;
       }
 
-      setGuestMessages(p => [...p, { from: "user", text: input }]);
+      setGuestMessages((p) => [...p, { from: "user", text: input }]);
       setInput("");
 
       setTimeout(() => {
-        setGuestMessages(p => [
-          ...p,
-          { from: "ai", text: dict.chat_ai_response }
-        ]);
+        setGuestMessages((p) => [...p, { from: "ai", text: dict.chat_ai_response }]);
       }, 400);
 
       return;
     }
 
-    // Logged-in mode
-    const chat = chats.find(c => c.id === activeChat);
+    // ------------------ Logged-in ------------------
+    const chat = chats.find((c) => c.id === activeChat);
     if (!chat) return;
 
     const userMsg = { from: "user", text: input };
-    const msgs = [...chat.messages, userMsg];
+    const baseMsgs = [...chat.messages, userMsg];
 
-    updateChat(msgs);
+    updateChat(baseMsgs);
     setInput("");
 
     // Auto-title
     if (chat.title === "New Chat") {
       const newTitle = generateTitle(input);
-      setChats(prev =>
-        prev.map(c =>
+      setChats((prev) =>
+        prev.map((c) =>
           c.id === chat.id ? { ...c, title: newTitle } : c
         )
       );
     }
 
-    // Apply persona → memory → typing effect
+    // AI Response
     setTimeout(() => {
       let response = `${dict.chat_ai_response} (${model})`;
+
+      // Apply persona logic
       response = applyPersona(persona, response);
 
       let i = 0;
       const typer = setInterval(() => {
         i++;
-        updateChat([...msgs, { from: "ai", text: response.slice(0, i) }]);
+        updateChat([...baseMsgs, { from: "ai", text: response.slice(0, i) }]);
 
         if (i >= response.length) clearInterval(typer);
       }, 20);
     }, 300);
   };
 
-  // ---------------------------
   // Render messages
-  // ---------------------------
   const renderMessages = () => {
     if (isGuest) {
       return guestMessages.map((msg, i) => (
@@ -185,7 +171,7 @@ export default function Chat() {
       ));
     }
 
-    const chat = chats.find(c => c.id === activeChat);
+    const chat = chats.find((c) => c.id === activeChat);
     if (!chat) return null;
 
     return chat.messages.map((msg, i) => (
@@ -193,9 +179,9 @@ export default function Chat() {
     ));
   };
 
-  // ---------------------------
+  // ------------------------------------
   // UI
-  // ---------------------------
+  // ------------------------------------
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       {!isGuest && (
@@ -236,8 +222,8 @@ export default function Chat() {
             className="form-control"
             value={input}
             placeholder={dict.chat_placeholder}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && sendMessage()}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           />
 
           <button className="btn btn-primary px-4" onClick={sendMessage}>
