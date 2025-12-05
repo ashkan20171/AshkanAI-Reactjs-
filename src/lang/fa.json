@@ -2,10 +2,17 @@
   "welcome_title_1": "به",
   "welcome_title_2": "AshkanAI خوش آمدید",
   "description_line1": "نسل جدید هوش مصنوعی؛ سریع‌تر، هوشمندتر و زیباتر.",
-  "description_line2": "همراه با طراحی مدرن و تجربه کاربری بی‌نقص.",
+  "description_line2": "طراحی شده با دقت و تجربه کاربری مدرن.",
   "enter_dashboard": "ورود به داشبورد",
   "rights_reserved": "تمامی حقوق محفوظ است",
   "login": "ورود",
-"signup": "ثبت‌نام"
-
+  "signup": "ثبت‌نام",
+  "dashboard": "داشبورد",
+  "logout": "خروج",
+  "email": "ایمیل",
+  "password": "رمز عبور",
+  "no_account": "حساب کاربری ندارید؟",
+  "invalid_credentials": "ایمیل یا رمز اشتباه است",
+  "fullname": "نام کامل",
+  "have_account": "حساب دارید؟"
 }

@@ -6,6 +6,13 @@
   "enter_dashboard": "Enter Dashboard",
   "rights_reserved": "All rights reserved",
   "login": "Login",
-"signup": "Sign Up"
-
+  "signup": "Sign Up",
+  "dashboard": "Dashboard",
+  "logout": "Logout",
+  "email": "Email",
+  "password": "Password",
+  "no_account": "Don't have an account?",
+  "invalid_credentials": "Invalid email or password",
+  "fullname": "Full Name",
+  "have_account": "Already have an account?"
 }
