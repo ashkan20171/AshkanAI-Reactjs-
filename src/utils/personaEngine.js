@@ -1,20 +1,19 @@
 export function applyPersona(persona, text) {
   if (!persona) return text;
 
-  let output = text;
+  let result = text;
 
-  // لحن AI
-  if (persona.tone === "friendly") {
-    output = "😊 " + output;
-  }
-  if (persona.tone === "formal") {
-    output = "📘 " + output;
-  }
+  // Tone
+  if (persona.tone === "friendly") result = "😊 " + result;
+  if (persona.tone === "formal") result = "📘 " + result;
+  if (persona.tone === "sarcastic") result = "😏 Well... " + result;
 
-  // رفتار خاص پرسونا
-  if (persona.behavior) {
-    output += `\n\n(${persona.behavior})`;
-  }
+  // Writing style
+  if (persona.style === "short") result = result.slice(0, 100);
+  if (persona.style === "detailed") result += "\n\n(Providing more detail as requested...)";
 
-  return output;
+  // Behavior instructions
+  result = `${persona.behavior}\n\n${result}`;
+
+  return result;
 }

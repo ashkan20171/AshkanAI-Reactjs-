@@ -1,25 +1,23 @@
-import { useLanguage } from "../context/LanguageContext";
-import { usePersona } from "../context/PersonaContext";
+import React from "react";
 
-export default function PersonaSelector({ persona, setPersona }) {
-  const { dict, lang } = useLanguage();
-  const { personas } = usePersona(); // پرسوناهای ذخیره‌شده + پیش‌فرض
-
+export default function PersonaSelector({
+  personas,
+  activePersona,
+  setActivePersona,
+}) {
   return (
-    <div className="mb-3" style={{ direction: lang === "fa" ? "rtl" : "ltr" }}>
-      <label className="form-label fw-bold">{dict.select_persona}</label>
-
-      <select
-        className="form-select"
-        value={persona}
-        onChange={(e) => setPersona(e.target.value)}
-      >
-        {personas.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+    <div className="mb-3 d-flex gap-2 flex-wrap">
+      {personas.map((p) => (
+        <button
+          key={p.id}
+          className={`btn ${
+            activePersona === p.id ? "btn-primary" : "btn-outline-secondary"
+          }`}
+          onClick={() => setActivePersona(p.id)}
+        >
+          {p.icon} {p.name}
+        </button>
+      ))}
     </div>
   );
 }
