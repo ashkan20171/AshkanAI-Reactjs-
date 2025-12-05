@@ -1,33 +1,34 @@
 import { useState } from "react";
-import { mockAI } from "../../services/ai";
+import { useLanguage } from "../../context/LanguageContext";
 
 export default function TaskAgent() {
+  const { dict, lang } = useLanguage();
   const [task, setTask] = useState("");
   const [result, setResult] = useState("");
 
-  const runTask = () => {
-    const output = mockAI(`Handle this task: ${task}`, "ultra");
-    setResult(output);
+  const run = () => {
+    if (!task.trim()) return;
+    setResult(dict.agent_sample_response);
   };
 
   return (
-    <div className="container mt-4" style={{ maxWidth: 850 }}>
-      <h3 className="fw-bold mb-4">🤖 Task AI Agent</h3>
+    <div className="container py-4" style={{ direction: lang === "fa" ? "rtl" : "ltr" }}>
+      <h3 className="fw-bold mb-3">{dict.task_agent}</h3>
 
       <textarea
         className="form-control mb-3"
-        rows="6"
-        placeholder="کار موردنظر را وارد کنید..."
+        placeholder={dict.agent_placeholder}
+        rows={6}
         value={task}
         onChange={(e) => setTask(e.target.value)}
       />
 
-      <button className="btn btn-dark w-100 mb-4" onClick={runTask}>
-        انجام بده
+      <button className="btn btn-primary w-100 mb-3" onClick={run}>
+        {dict.run}
       </button>
 
       {result && (
-        <div className="p-3 rounded-4 bg-white shadow-sm">
+        <div className="p-3 bg-white border rounded-4 shadow-sm">
           {result}
         </div>
       )}

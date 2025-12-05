@@ -1,69 +1,31 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function FileManager() {
-  const { user } = useAuth();
+  const { dict, lang } = useLanguage();
   const [files, setFiles] = useState([]);
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("ashkanai_files")) || [];
-    setFiles(saved);
-  }, []);
-
-  const handleUpload = (e) => {
+  const upload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const newFile = {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      owner: user.email,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    const updated = [...files, newFile];
-    setFiles(updated);
-    localStorage.setItem("ashkanai_files", JSON.stringify(updated));
-  };
-
-  const deleteFile = (index) => {
-    const updated = files.filter((_, i) => i !== index);
-    setFiles(updated);
-    localStorage.setItem("ashkanai_files", JSON.stringify(updated));
+    setFiles((prev) => [...prev, file.name]);
   };
 
   return (
-    <div className="container mt-4" style={{ maxWidth: 800 }}>
-      <h3 className="fw-bold mb-4">📁 مدیریت فایل‌ها</h3>
+    <div className="container py-4" style={{ direction: lang === "fa" ? "rtl" : "ltr" }}>
+      <h3 className="fw-bold mb-3">{dict.files_manager}</h3>
 
-      {/* Upload */}
-      <input type="file" className="form-control mb-4" onChange={handleUpload} />
+      <input type="file" className="form-control mb-3" onChange={upload} />
 
-      {/* Files list */}
       <div className="list-group">
         {files.length === 0 && (
-          <p className="text-center text-muted">فایلی وجود ندارد.</p>
+          <div className="text-muted">{dict.no_files}</div>
         )}
 
-        {files.map((file, index) => (
-          <div
-            key={index}
-            className="list-group-item d-flex justify-content-between align-items-center"
-          >
-            <div>
-              <strong>{file.name}</strong>
-              <div className="text-muted small">
-                {Math.round(file.size / 1024)} KB
-              </div>
-            </div>
-
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={() => deleteFile(index)}
-            >
-              حذف
-            </button>
+        {files.map((f, i) => (
+          <div key={i} className="list-group-item">
+            📄 {f}
           </div>
         ))}
       </div>

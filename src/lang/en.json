@@ -14,5 +14,56 @@
   "no_account": "Don't have an account?",
   "invalid_credentials": "Invalid email or password",
   "fullname": "Full Name",
-  "have_account": "Already have an account?"
+  "have_account": "Already have an account?",
+  "dashboard_welcome": "Welcome",
+  "dashboard_subtitle": "Your intelligent AI workspace — fast, modern and powerful.",
+  "active_plan": "Active Plan",
+  "quick_tools": "Quick Tools",
+  
+  "ai_chat": "AI Chat",
+  "ai_chat_desc": "Ask anything and get intelligent AI responses.",
+
+  "summarizer": "Summarizer",
+  "summarizer_desc": "Convert long text into short, clear summaries.",
+
+  "rewriter": "Rewriter",
+  "rewriter_desc": "Rewrite text with clarity and creativity.",
+
+  "translator": "Translator",
+  "translator_desc": "Translate text instantly between multiple languages.",
+
+  "image_gen": "Image Generator",
+  "image_gen_desc": "Generate images from text in seconds.",
+
+  "code_assistant": "Code Assistant",
+  "code_assistant_desc": "Fix bugs and improve your code using AI.",
+
+  "chat_title": "AI Chat Assistant",
+  "chat_welcome": "Hello! How can I assist you today?",
+  "chat_placeholder": "Type your message...",
+  "chat_send": "Send",
+  "chat_ai_response": "This is an example AI response. Connect API later.",
+
+  "tools_page_title": "AI Tools",
+  "task_agent": "Task Agent",
+  "task_agent_desc": "Let AI perform tasks automatically.",
+
+  "summarizer_placeholder": "Paste long text here...",
+  "summary_sample_response": "This is an example summary. Connect to real AI API later.",
+  "run": "Run",
+
+  "rewriter_placeholder": "Enter text you want rewritten...",
+  "rewriter_sample_response": "This is a rewritten example. Real AI will rewrite it better.",
+  
+  "image_prompt_placeholder": "Describe the image you want...",
+  "generate": "Generate",
+
+  "code_placeholder": "Paste code here...",
+  "code_sample_response": "This is an example code analysis. Real AI will explain or fix the code.",
+
+  "agent_placeholder": "Describe a task for the AI agent to perform...",
+  "agent_sample_response": "This is an example task execution. Real AI can automate workflows later.",
+
+  "files_manager": "File Manager",
+  "no_files": "No files uploaded yet."
 }
