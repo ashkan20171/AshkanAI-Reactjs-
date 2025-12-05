@@ -1,3 +1,5 @@
+// ✅ Chat.jsx (Final Clean Version)
+
 import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
@@ -17,17 +19,21 @@ import { detectPersona } from "../utils/autoPersonaDetector";
 import { applyAffinityLayers } from "../utils/affinityMemoryEngine";
 import { detectEmotion } from "../utils/emotionDetector";
 import { applyEmotionLayer } from "../utils/emotionEngine";
+import { extractContext, applyContextLayer } from "../utils/dynamicContextEngine";
+import { selfReflect } from "../utils/reflectionEngine";
+import { optimizeResponse } from "../utils/responseOptimizer";
 
 export default function Chat() {
   const { dict, lang } = useLanguage();
   const { user } = useAuth();
-  const { memory, setMemory, addInterest, pushTopic } = useMemory();
+  const { memory, setMemory, addInterest } = useMemory();
 
-  // Persona
   const { personas, activePersona, setActivePersona } = usePersona();
   const persona = personas.find(p => p.id === activePersona);
 
-  // Guest mode
+  // -----------------------------
+  // GUEST MODE
+  // -----------------------------
   const isGuest = !user;
   const guestLimit = 10;
 
@@ -42,7 +48,9 @@ export default function Chat() {
       localStorage.setItem("ashkanai_guest_chat", JSON.stringify(guestMessages));
   }, [guestMessages]);
 
-  // Logged-in chats
+  // -----------------------------
+  // LOGGED-IN CHATS
+  // -----------------------------
   const [chats, setChats] = useState(() => {
     if (isGuest) return [];
     const saved = localStorage.getItem("ashkanai_chats");
@@ -58,18 +66,20 @@ export default function Chat() {
   const [model, setModel] = useState("gpt4");
   const chatEndRef = useRef(null);
 
-  // Scroll
+  // auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [guestMessages, chats]);
 
-  // Memory extraction
+  // -----------------------------
+  // MEMORY EXTRACTION
+  // -----------------------------
   useEffect(() => {
     const t = input.toLowerCase();
 
     if (t.includes("my name is")) {
       const name = input.split("is")[1]?.trim();
-      if (name) setMemory(p => ({ ...p, name }));
+      if (name) setMemory(prev => ({ ...prev, name }));
     }
 
     if (t.includes("i like")) {
@@ -78,7 +88,9 @@ export default function Chat() {
     }
   }, [input]);
 
-  // Update chat
+  // -----------------------------
+  // UPDATE CHAT FUNCTION
+  // -----------------------------
   const updateChat = msgs => {
     setChats(prev => {
       const updated = prev.map(c =>
@@ -89,28 +101,35 @@ export default function Chat() {
     });
   };
 
-  // Send Message
+  // -----------------------------
+  // SEND MESSAGE
+  // -----------------------------
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    // Plugins
+    // Plugin commands
     if (input.startsWith("/")) {
       const [cmd, ...rest] = input.slice(1).split(" ");
       const text = rest.join(" ");
 
       if (plugins[cmd]) {
         const result = plugins[cmd](text);
-        if (isGuest) setGuestMessages(m => [...m, { from: "ai", text: result }]);
+
+        if (isGuest)
+          setGuestMessages(m => [...m, { from: "ai", text: result }]);
         else {
           const c = chats.find(c => c.id === activeChat);
           updateChat([...c.messages, { from: "ai", text: result }]);
         }
+
         setInput("");
         return;
       }
     }
 
-    // Guest mode
+    // ---------------------------------------
+    // GUEST MODE LOGIC
+    // ---------------------------------------
     if (isGuest) {
       const count = guestMessages.filter(m => m.from === "user").length;
 
@@ -119,17 +138,23 @@ export default function Chat() {
         return;
       }
 
-      setGuestMessages(p => [...p, { from: "user", text: input }]);
+      const newGuest = [...guestMessages, { from: "user", text: input }];
+      setGuestMessages(newGuest);
       setInput("");
 
       setTimeout(() => {
-        setGuestMessages(p => [...p, { from: "ai", text: dict.chat_ai_response }]);
-      }, 400);
+        setGuestMessages(g => [
+          ...g,
+          { from: "ai", text: dict.chat_ai_response }
+        ]);
+      }, 300);
 
       return;
     }
 
-    // Logged-in mode
+    // ---------------------------------------
+    // LOGGED-IN USER CHAT LOGIC
+    // ---------------------------------------
     const chat = chats.find(c => c.id === activeChat);
     const userMsg = { from: "user", text: input };
     const baseMsgs = [...chat.messages, userMsg];
@@ -137,39 +162,50 @@ export default function Chat() {
     updateChat(baseMsgs);
     setInput("");
 
-    // Auto-title
+    // Auto title
     if (chat.title === "New Chat") {
+      const newTitle = generateTitle(input);
       setChats(prev =>
-        prev.map(c =>
-          c.id === chat.id ? { ...c, title: generateTitle(input) } : c
-        )
+        prev.map(c => c.id === chat.id ? { ...c, title: newTitle } : c)
       );
     }
 
-    // Auto persona detection
+    // Auto persona switching
     const detected = detectPersona(input);
     if (detected && detected !== activePersona) {
       setActivePersona(detected);
-      updateChat([
-        ...baseMsgs,
-        { from: "system", text: `🔄 Auto persona switched to: ${detected}` }
-      ]);
+      updateChat([...baseMsgs, { from: "system", text: `🔄 Persona changed to: ${detected}` }]);
     }
 
-    // AI Response
+    // ---------------------------------------
+    // AI RESPONSE PIPELINE
+    // ---------------------------------------
     setTimeout(() => {
       let response = `${dict.chat_ai_response} (${model})`;
 
-      // persona layer
+      // 1. Dynamic context
+      const context = extractContext(baseMsgs, 6);
+      response = applyContextLayer(response, context);
+
+      // 2. Persona layer
       response = applyPersona(persona, response);
 
-      // memory
+      // 3. Memory affinity
       response = applyAffinityLayers(response, memory);
 
-      // emotion
+      // 4. Emotion layer
       const emotion = detectEmotion(input);
       response = applyEmotionLayer(response, emotion);
 
+      // 5. Self-reflection
+      response = selfReflect(response, context);
+
+      // 6. Optimizer
+      response = optimizeResponse(response);
+
+      // -------------------------
+      // TYPING EFFECT
+      // -------------------------
       let i = 0;
       const typer = setInterval(() => {
         i++;
@@ -179,7 +215,9 @@ export default function Chat() {
     }, 250);
   };
 
-  // Render
+  // -----------------------------
+  // RENDER MESSAGES
+  // -----------------------------
   const renderMessages = () => {
     if (isGuest)
       return guestMessages.map((msg, i) => (
@@ -192,6 +230,9 @@ export default function Chat() {
     ));
   };
 
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       {!isGuest && (
@@ -219,10 +260,8 @@ export default function Chat() {
           </>
         )}
 
-        <div
-          className="border rounded-4 shadow-sm p-3 mb-3"
-          style={{ height: "60vh", overflowY: "auto" }}
-        >
+        <div className="border rounded-4 shadow-sm p-3 mb-3"
+             style={{ height: "60vh", overflowY: "auto" }}>
           {renderMessages()}
           <div ref={chatEndRef}></div>
         </div>

@@ -8,12 +8,11 @@ export function MemoryProvider({ children }) {
     return saved
       ? JSON.parse(saved)
       : {
-          name: null,
-          preferences: {},
-          writingStyle: "normal",
-          tone: "neutral",
+          name: "",
           interests: [],
-          lastTopics: [],
+          tone: "neutral",
+          writingStyle: "normal",
+          topics: [],
         };
   });
 
@@ -21,30 +20,26 @@ export function MemoryProvider({ children }) {
     localStorage.setItem("ashkanai_memory", JSON.stringify(memory));
   }, [memory]);
 
-  // ثبت علاقه جدید
-  const addInterest = (item) => {
+  const addInterest = (i) => {
     setMemory((prev) => ({
       ...prev,
-      interests: [...new Set([...prev.interests, item])],
+      interests: [...prev.interests, i],
     }));
   };
 
-  // ثبت آخرین موضوعات
-  const pushTopic = (topic) => {
+  const pushTopic = (t) => {
     setMemory((prev) => ({
       ...prev,
-      lastTopics: [...prev.lastTopics.slice(-4), topic],
+      topics: [...prev.topics.slice(-10), t], // آخرین ۱۰ موضوع
     }));
   };
 
-  // تغییر لحن
   const setTone = (tone) => {
     setMemory((prev) => ({ ...prev, tone }));
   };
 
-  // تغییر سبک نوشتن
-  const setStyle = (writingStyle) => {
-    setMemory((prev) => ({ ...prev, writingStyle }));
+  const setStyle = (style) => {
+    setMemory((prev) => ({ ...prev, writingStyle: style }));
   };
 
   return (

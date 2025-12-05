@@ -1,40 +1,38 @@
-// utils/affinityMemoryEngine.js
+// src/utils/affinityMemoryEngine.js
 
 export function applyAffinityLayers(response, memory) {
-  let output = response;
+  if (!memory) return response;
 
-  // 1) Personal Name Layer
+  let modified = response;
+
+  // --- Name Layer ---
   if (memory.name) {
-    output = `Hey ${memory.name}, ` + output;
+    modified = `Hey ${memory.name}, ` + modified;
   }
 
-  // 2) Tone Layer
-  if (memory.tone === "friendly") {
-    output = "😊 " + output.replace(/\. /g, "! ");
-  }
-  if (memory.tone === "formal") {
-    output = "Dear user, " + output;
+  // --- Interests Layer ---
+  if (memory.interests && memory.interests.length > 0) {
+    const interest = memory.interests[memory.interests.length - 1];
+    modified += `\n\nAlso, since you mentioned you like **${interest}**, I included that in my thinking.`;
   }
 
-  // 3) Writing Style Layer
+  // --- Writing Style Layer ---
   if (memory.writingStyle === "short") {
-    output = output.slice(0, 120) + "...";
+    modified = modified.slice(0, 120);
   }
+
   if (memory.writingStyle === "detailed") {
-    output += "\n\n(Additional elaboration provided as you prefer more detailed explanations.)";
+    modified += "\n\n(Expanded with more details because you prefer detailed answers.)";
   }
 
-  // 4) Interest Affinity Layer
-  if (memory.interests.length > 0) {
-    const interest = memory.interests[0];
-
-    output += `\n\n🔎 Since you enjoy **${interest}**, here’s something related to it.`;
+  // --- Tone Layer ---
+  if (memory.tone === "friendly") {
+    modified = "😊 " + modified;
   }
 
-  // 5) Conversational Topic Layer
-  if (memory.recentTopics.length > 0) {
-    output += `\n\n🧵 We're still on your previous topic: *${memory.recentTopics[0]}*`;
+  if (memory.tone === "formal") {
+    modified = "📘 " + modified;
   }
 
-  return output;
+  return modified;
 }
