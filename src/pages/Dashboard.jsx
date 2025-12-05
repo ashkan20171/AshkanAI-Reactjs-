@@ -27,6 +27,10 @@ export default function Dashboard() {
         <Link to="/profile" className="list-group-item list-group-item-action">
           ⚙️ پروفایل
         </Link>
+        
+        <Link to="/files" className="list-group-item list-group-item-action">
+       📁 مدیریت فایل‌ها
+       </Link>
       </div>
     </div>
   );

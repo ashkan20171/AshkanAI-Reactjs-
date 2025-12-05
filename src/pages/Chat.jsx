@@ -3,17 +3,24 @@ import ChatMessage from "../components/ChatMessage";
 import AIInputBox from "../components/AIInputBox";
 import { useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
+import { mockAI } from "../services/ai";
+import AIModeSelector from "../components/AIModeSelector";
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
 const chatEndRef = useRef(null);
+const [mode, setMode] = useState("smart");
+<AIModeSelector mode={mode} setMode={setMode} />
+
+
 useEffect(() => {
   chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
 }, [messages]);
   // Fake AI reply until backend is ready
   const generateAIReply = (userText) => {
-    return "این پاسخ آزمایشی AshkanAI است. پیام تو: " + userText;
-  };
+  return mockAI(userText, mode);
+};
+
 
   const handleSend = (text) => {
     const userMsg = { sender: "user", text };
