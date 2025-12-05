@@ -21,7 +21,14 @@ const plans = {
     allowImageGen: true,
     allowCodeAssistant: true,
     allowTaskAgent: true
-  }
+  },
+  plugins: {
+  summarize: true,
+  rewrite: true,
+  translate: false,  // فقط برای Pro+
+  explain: true
+}
+
 };
 
 export default plans;

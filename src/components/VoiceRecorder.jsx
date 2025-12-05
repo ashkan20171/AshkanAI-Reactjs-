@@ -18,12 +18,11 @@ export default function VoiceRecorder({ setInput }) {
     if (!recognition) return alert(dict.voice_not_supported);
 
     setRecording(true);
-
     recognition.start();
 
     recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      setInput((prev) => prev + " " + text);
+      const transcript = event.results[0][0].transcript;
+      setInput((prev) => prev + " " + transcript);
     };
 
     recognition.onerror = () => {

@@ -9,14 +9,17 @@ export function PersonaProvider({ children }) {
     return saved ? JSON.parse(saved) : defaultPersonas;
   });
 
+  // ذخیره لیست پرسوناها
   useEffect(() => {
     localStorage.setItem("ashkanai_personas", JSON.stringify(personas));
   }, [personas]);
 
+  // افزودن پرسونا
   const addPersona = (persona) => {
     setPersonas((prev) => [...prev, persona]);
   };
 
+  // حذف پرسونا
   const deletePersona = (id) => {
     setPersonas((prev) => prev.filter((p) => p.id !== id));
   };

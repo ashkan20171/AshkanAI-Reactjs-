@@ -5,11 +5,11 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import VoicePlayer from "./VoicePlayer";
 
-export default function MessageBubble({ msg, lang, dict }) {
+export default function MessageBubble({ msg, lang, dict, onPlugin }) {
   const isUser = msg.from === "user";
 
   const copyText = () => {
-    navigator.clipboard.writeText(msg.text);
+    if (msg.text) navigator.clipboard.writeText(msg.text);
   };
 
   return (
@@ -32,38 +32,100 @@ export default function MessageBubble({ msg, lang, dict }) {
           position: "relative",
         }}
       >
-        {/* نمایش Markdown + Highlight */}
-        <ReactMarkdown
-          children={msg.text}
-          remarkPlugins={[remarkGfm]}
-          components={{
-            code({ inline, className, children }) {
-              const match = /language-(\w+)/.exec(className || "");
-              return !inline && match ? (
-                <SyntaxHighlighter
-                  style={oneDark}
-                  language={match[1]}
-                  PreTag="div"
-                >
-                  {String(children).replace(/\n$/, "")}
-                </SyntaxHighlighter>
-              ) : (
-                <code className="bg-dark text-warning px-1 rounded">
-                  {children}
-                </code>
-              );
-            },
-          }}
-        />
+        {/* Image message */}
+        {msg.type === "image" && (
+          <>
+            <img
+              src={msg.url}
+              alt="uploaded"
+              className="img-fluid rounded"
+              style={{ maxWidth: "300px" }}
+            />
 
-        {/* دکمه‌های پیام AI */}
-        {!isUser && (
+            <div className="mt-2 d-flex gap-2">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => onPlugin("summarize", "[Image Content]")}
+              >
+                🔍 Analyze
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* File message */}
+        {msg.type === "file" && (
+          <div>
+            📄 <strong>{msg.name}</strong> ({msg.size} bytes)
+          </div>
+        )}
+
+        {/* Text message + Markdown */}
+        {msg.text && (
+          <ReactMarkdown
+            children={msg.text}
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ inline, className, children }) {
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={match[1]}
+                    PreTag="div"
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className="bg-dark text-warning px-1 rounded">
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          />
+        )}
+
+        {/* Actions for AI */}
+        {!isUser && msg.text && (
           <div className="d-flex gap-2 mt-2">
             <button className="btn btn-sm btn-outline-secondary" onClick={copyText}>
               📋 {dict.copy}
             </button>
-
             <VoicePlayer text={msg.text} />
+          </div>
+        )}
+
+        {/* Actions for USER messages */}
+        {isUser && msg.text && (
+          <div className="d-flex gap-2 mt-2">
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => onPlugin("summarize", msg.text)}
+            >
+              {dict.summarize}
+            </button>
+
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => onPlugin("rewrite", msg.text)}
+            >
+              {dict.rewrite}
+            </button>
+
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => onPlugin("translate", msg.text)}
+            >
+              {dict.translate}
+            </button>
+
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => onPlugin("explain", msg.text)}
+            >
+              {dict.explain}
+            </button>
           </div>
         )}
       </div>
