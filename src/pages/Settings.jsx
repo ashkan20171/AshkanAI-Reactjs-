@@ -1,71 +1,56 @@
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Settings() {
-  const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-
-  const [name, setName] = useState(user?.name || "");
-  const [password, setPassword] = useState(user?.password || "");
-
-  const saveChanges = () => {
-    const updated = { ...user, name, password };
-
-    localStorage.setItem("ashkanai_user", JSON.stringify(updated));
-
-    let users = JSON.parse(localStorage.getItem("ashkanai_users"));
-    const idx = users.findIndex((u) => u.email === user.email);
-    users[idx] = updated;
-
-    localStorage.setItem("ashkanai_users", JSON.stringify(users));
-
-    alert("تغییرات ذخیره شد ✔");
-  };
+  const { lang, changeLang, dict } = useLanguage();
+  const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   return (
-    <div className="container mt-4" style={{ maxWidth: 700 }}>
-      <h3 className="fw-bold mb-4">⚙️ تنظیمات حساب</h3>
+    <div className="container py-4" style={{ direction: lang === "fa" ? "rtl" : "ltr" }}>
+      <h3 className="fw-bold mb-4">{dict.settings}</h3>
 
-      <div className="p-4 border rounded-4 bg-white shadow-sm">
-
-        {/* Name */}
-        <div className="mb-3">
-          <label className="form-label">نام</label>
-          <input
-            className="form-control"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-
-        {/* Password */}
-        <div className="mb-3">
-          <label className="form-label">رمز عبور</label>
-          <input
-            className="form-control"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        {/* Theme */}
-        <div className="mb-3">
-          <label className="form-label">حالت نمایش</label>
-          <button className="btn btn-secondary w-100" onClick={toggleTheme}>
-            {theme === "dark" ? "☀ حالت روشن" : "🌙 حالت تاریک"}
-          </button>
-        </div>
-
-        <button className="btn btn-primary w-100" onClick={saveChanges}>
-          ذخیره تغییرات
-        </button>
+      {/* Language */}
+      <div className="card p-4 rounded-4 shadow-sm mb-4" style={{ maxWidth: 500 }}>
+        <h5>{dict.language}</h5>
+        <select
+          className="form-select mt-2"
+          value={lang}
+          onChange={(e) => changeLang(e.target.value)}
+        >
+          <option value="en">{dict.english}</option>
+          <option value="fa">{dict.persian}</option>
+        </select>
       </div>
 
-      <button className="btn btn-danger w-100 mt-4" onClick={logout}>
-        خروج از حساب
-      </button>
+      {/* Theme */}
+      <div className="card p-4 rounded-4 shadow-sm mb-4" style={{ maxWidth: 500 }}>
+        <h5>{dict.theme}</h5>
+        <select
+          className="form-select mt-2"
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+        >
+          <option value="light">{dict.light}</option>
+          <option value="dark">{dict.dark}</option>
+          <option value="system">{dict.system}</option>
+        </select>
+      </div>
+
+      {/* Plan */}
+      <div className="card p-4 rounded-4 shadow-sm" style={{ maxWidth: 500 }}>
+        <h5>{dict.subscription}</h5>
+        <p className="mt-2">
+          {dict.active_plan}:{" "}
+          <span className="badge bg-primary px-3">
+            {user?.plan.toUpperCase()}
+          </span>
+        </p>
+        <a className="btn btn-outline-primary mt-3" href="/upgrade">
+          {dict.upgrade_plan}
+        </a>
+      </div>
     </div>
   );
 }

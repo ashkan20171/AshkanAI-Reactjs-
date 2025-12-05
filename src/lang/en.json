@@ -65,5 +65,38 @@
   "agent_sample_response": "This is an example task execution. Real AI can automate workflows later.",
 
   "files_manager": "File Manager",
-  "no_files": "No files uploaded yet."
+  "no_files": "No files uploaded yet.",
+
+  "profile": "Profile",
+  "account_info": "Account Information",
+  "profile_tip": "You can manage your subscription and personal data from this panel.",
+
+  "settings": "Settings",
+  "theme": "Theme",
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System",
+  "subscription": "Subscription",
+  "upgrade_plan": "Upgrade Plan",
+
+  "plan_free": "Free",
+  "plan_pro": "Pro",
+  "plan_ultimate": "Ultimate",
+  "free_price": "$0 / month",
+
+  "f_basic_ai": "Basic AI Chat",
+  "f_summarizer": "Summarizer tool",
+  "f_translator": "Translator tool",
+  "f_rewriter": "Rewriter tool",
+  "f_images": "Image generation",
+  "f_unlimited": "Unlimited messages",
+  "f_priority": "Priority AI access",
+
+  "select_plan": "Select Plan",
+
+  "no_access_image": "Your plan does not include image generation. Please upgrade to continue.",
+
+  "limit_reached": "You have reached the message limit for your current plan. Upgrade to continue chatting.",
+
+  "no_access_agent": "Your plan does not include access to Task Agent."
 }

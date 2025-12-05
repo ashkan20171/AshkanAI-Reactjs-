@@ -1,10 +1,27 @@
 import { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext";
+
 
 export default function ImageGenerator() {
   const { dict, lang } = useLanguage();
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState(null);
+const { user } = useAuth();
+
+if (!user.planDetails.allowImageGen) {
+  return (
+    <div className="container py-4">
+      <div className="alert alert-danger">
+        {dict.no_access_image}
+      </div>
+
+      <a href="/upgrade" className="btn btn-primary">
+        {dict.upgrade_plan}
+      </a>
+    </div>
+  );
+}
 
   const generate = () => {
     if (!prompt.trim()) return;

@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function TaskAgent() {
   const { dict, lang } = useLanguage();
+  const { user } = useAuth(); // ← این باید باشد
+
   const [task, setTask] = useState("");
   const [result, setResult] = useState("");
+
+  // محدودیت پلن
+  if (!user.planDetails.allowTaskAgent) {
+    return (
+      <div className="container py-4" style={{ direction: lang === "fa" ? "rtl" : "ltr" }}>
+        <div className="alert alert-warning">{dict.no_access_agent}</div>
+        <a href="/upgrade" className="btn btn-primary">{dict.upgrade_plan}</a>
+      </div>
+    );
+  }
 
   const run = () => {
     if (!task.trim()) return;

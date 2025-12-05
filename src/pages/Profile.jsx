@@ -1,19 +1,36 @@
+import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function Profile() {
+  const { dict, lang } = useLanguage();
   const { user } = useAuth();
 
-  if (!user)
-    return <h3 className="text-center mt-5">ابتدا وارد شوید</h3>;
-
   return (
-    <div className="container mt-4" style={{ maxWidth: 600 }}>
-      <h2 className="fw-bold">پروفایل</h2>
+    <div
+      className="container py-4"
+      style={{ direction: lang === "fa" ? "rtl" : "ltr" }}
+    >
+      <h3 className="fw-bold mb-4">{dict.profile}</h3>
 
-      <div className="border rounded-4 p-4 mt-3 shadow-sm bg-white">
-        <p><strong>نام:</strong> {user.name}</p>
-        <p><strong>ایمیل:</strong> {user.email}</p>
-        <p><strong>پلن:</strong> {user.plan}</p>
+      <div className="card p-4 rounded-4 shadow-sm" style={{ maxWidth: 500 }}>
+        <h5 className="mb-3">{dict.account_info}</h5>
+
+        <p>
+          <strong>{dict.fullname}: </strong>
+          {user?.name}
+        </p>
+
+        <p>
+          <strong>{dict.email}: </strong>
+          {user?.email}
+        </p>
+
+        <p>
+          <strong>{dict.active_plan}: </strong>
+          <span className="badge bg-primary">{user?.plan.toUpperCase()}</span>
+        </p>
+
+        <p className="text-muted small">{dict.profile_tip}</p>
       </div>
     </div>
   );

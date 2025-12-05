@@ -1,4 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import plans from "../plans";
+
+const enhancedUser = {
+  ...user,
+  planDetails: plans[user.plan]
+};
 
 const AuthContext = createContext();
 

@@ -7,30 +7,48 @@ export default function Chat() {
   const { user } = useAuth();
 
   const [messages, setMessages] = useState([
-    { from: "ai", text: dict.chat_welcome },
+    { from: "ai", text: dict.chat_welcome }
   ]);
+
   const [input, setInput] = useState("");
 
   const chatEndRef = useRef(null);
 
+  // Auto scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // If language changes, update first message
+  useEffect(() => {
+    setMessages([{ from: "ai", text: dict.chat_welcome }]);
+  }, [dict.chat_welcome]);
+
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    const userMsg = { from: "user", text: input };
-    setMessages((m) => [...m, userMsg]);
+    const messagesUsed = messages.length;
+    const limit = user.planDetails.maxMessages;
+
+    // Check plan limits
+    if (limit !== Infinity && messagesUsed >= limit) {
+      setMessages(m => [
+        ...m,
+        { from: "ai", text: dict.limit_reached }
+      ]);
+      return;
+    }
+
+    // Add user message
+    setMessages(m => [...m, { from: "user", text: input }]);
     setInput("");
 
-    // Fake AI response (replace with real API later)
+    // Fake AI response
     setTimeout(() => {
-      const aiMsg = {
-        from: "ai",
-        text: dict.chat_ai_response,
-      };
-      setMessages((m) => [...m, aiMsg]);
+      setMessages(m => [
+        ...m,
+        { from: "ai", text: dict.chat_ai_response }
+      ]);
     }, 600);
   };
 
@@ -45,7 +63,7 @@ export default function Chat() {
     >
       <h2 className="fw-bold text-center mb-4">{dict.chat_title}</h2>
 
-      {/* Chat box */}
+      {/* Chat window */}
       <div
         className="border rounded-4 shadow-sm p-3 mb-3"
         style={{
