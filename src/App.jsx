@@ -18,6 +18,9 @@ import ImageGenerator from "./pages/tools/ImageGenerator";
 import CodingAssistant from "./pages/tools/CodingAssistant";
 import IdeaGenerator from "./pages/tools/IdeaGenerator";
 import TaskAgent from "./pages/tools/TaskAgent";
+import MemoryManager from "./pages/MemoryManager";
+import PersonaManager from "./pages/PersonaManager";
+
 
 function App() {
   return (
@@ -28,6 +31,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/memory" element={<MemoryManager />} />
+        <Route path="/personas" element={<PersonaManager />} />
+
 
         {/* Protected */}
         <Route

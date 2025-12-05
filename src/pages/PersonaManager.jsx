@@ -3,30 +3,48 @@ import { usePersona } from "../context/PersonaContext";
 import { useLanguage } from "../context/LanguageContext";
 
 export default function PersonaManager() {
-  const { personas, addPersona, deletePersona } = usePersona();
+  const {
+    personas,
+    addPersona,
+    deletePersona,
+    activePersona,
+    setActivePersona,
+  } = usePersona();
+
   const { dict, lang } = useLanguage();
 
   const [form, setForm] = useState({
     id: "",
     name: "",
     tone: "",
-    behavior: ""
+    behavior: "",
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     if (!form.id || !form.name) return;
 
-    addPersona(form);
-    setForm({ id: "", name: "", tone: "", behavior: "" });
+    addPersona({
+      ...form,
+    });
+
+    setForm({
+      id: "",
+      name: "",
+      tone: "",
+      behavior: "",
+    });
   };
 
   return (
-    <div className="container py-4" style={{ direction: lang === "fa" ? "rtl" : "ltr" }}>
+    <div
+      className="container py-4"
+      style={{ direction: lang === "fa" ? "rtl" : "ltr" }}
+    >
       <h3 className="fw-bold mb-4">{dict.persona_manager}</h3>
 
       <div className="row">
-        
         {/* فرم ساخت پرسونا */}
         <div className="col-md-5">
           <div className="card p-4 rounded-4 shadow-sm">
@@ -61,7 +79,9 @@ export default function PersonaManager() {
                 onChange={(e) => setForm({ ...form, behavior: e.target.value })}
               />
 
-              <button className="btn btn-primary w-100">{dict.save_persona}</button>
+              <button className="btn btn-primary w-100">
+                {dict.save_persona}
+              </button>
             </form>
           </div>
         </div>
@@ -72,22 +92,44 @@ export default function PersonaManager() {
             <h5 className="fw-bold mb-3">{dict.persona_list}</h5>
 
             {personas.map((p) => (
-              <div key={p.id} className="border rounded-3 p-3 mb-2">
-                <strong>{p.name}</strong> <br />
-                <small className="text-muted">{p.tone}</small>
-                <p className="mt-2">{p.behavior}</p>
+              <div
+                key={p.id}
+                className={`border rounded-3 p-3 mb-2 ${
+                  activePersona === p.id ? "bg-light" : ""
+                }`}
+              >
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{p.name}</strong> <br />
+                    <small className="text-muted">{p.tone}</small>
+                  </div>
 
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={() => deletePersona(p.id)}
-                >
-                  {dict.delete}
-                </button>
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => setActivePersona(p.id)}
+                    >
+                      {activePersona === p.id
+                        ? dict.active_persona
+                        : dict.set_active}
+                    </button>
+
+                    {p.id !== "assistant" && (
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => deletePersona(p.id)}
+                      >
+                        {dict.delete}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <p className="mt-2">{p.behavior}</p>
               </div>
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );

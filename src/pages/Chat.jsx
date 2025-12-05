@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
+import { useMemory } from "../context/MemoryContext";
+import { usePersona } from "../context/PersonaContext";
 
 import ChatSidebar from "../components/ChatSidebar";
 import PersonaSelector from "../components/PersonaSelector";
@@ -8,19 +10,22 @@ import ModelSelector from "../components/ModelSelector";
 import VoiceRecorder from "../components/VoiceRecorder";
 import MessageBubble from "../components/MessageBubble";
 
-import { useMemory } from "../context/MemoryContext";
 import { generateTitle } from "../utils/titleGenerator";
 import { plugins } from "../utils/pluginEngine";
+import { applyPersona } from "../utils/personaEngine";
 
 export default function Chat() {
   const { dict, lang } = useLanguage();
   const { user } = useAuth();
   const { memory, setMemory } = useMemory();
 
-  // ------------- Guest Mode -------------
+  const { personas, activePersona, setActivePersona } = usePersona();
+  const persona = personas.find(p => p.id === activePersona);
+
   const isGuest = !user;
   const guestLimit = 10;
 
+  // Guest chat
   const [guestMessages, setGuestMessages] = useState(() => {
     if (!isGuest) return [];
     const saved = localStorage.getItem("ashkanai_guest_chat");
@@ -28,15 +33,11 @@ export default function Chat() {
   });
 
   useEffect(() => {
-    if (isGuest) {
-      localStorage.setItem(
-        "ashkanai_guest_chat",
-        JSON.stringify(guestMessages)
-      );
-    }
+    if (isGuest)
+      localStorage.setItem("ashkanai_guest_chat", JSON.stringify(guestMessages));
   }, [guestMessages]);
 
-  // ------------- Logged-in Chat Storage -------------
+  // Logged-in chats
   const [chats, setChats] = useState(() => {
     if (isGuest) return [];
     const saved = localStorage.getItem("ashkanai_chats");
@@ -49,125 +50,59 @@ export default function Chat() {
   });
 
   const [input, setInput] = useState("");
-  const [persona, setPersona] = useState("assistant");
   const [model, setModel] = useState("gpt4");
+
   const chatEndRef = useRef(null);
 
-  // Scroll always
+  // Always scroll down
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [guestMessages, chats]);
 
-  // Memory detection
+  // Memory extraction
   useEffect(() => {
-    if (input.toLowerCase().includes("my name is")) {
+    const text = input.toLowerCase();
+
+    if (text.includes("my name is")) {
       const name = input.split("is")[1]?.trim();
-      if (name) setMemory({ ...memory, name });
+      if (name) setMemory(prev => ({ ...prev, name }));
     }
   }, [input]);
 
-  // -----------------------------------
-  // Update Logged-in Chat
-  // -----------------------------------
-  const updateChat = (msgs) => {
-    setChats((prev) =>
-      prev.map((c) =>
+  // ---------------------------
+  // Update chat messages
+  // ---------------------------
+  const updateChat = msgs => {
+    setChats(prev =>
+      prev.map(c =>
         c.id === activeChat ? { ...c, messages: msgs } : c
       )
     );
+
+    localStorage.setItem("ashkanai_chats", JSON.stringify(chats));
   };
 
-  // -----------------------------------
-  // Plugin executor
-  // -----------------------------------
-  const runPlugin = (type, text) => {
-    if (isGuest) {
-      setGuestMessages((prev) => [
-        ...prev,
-        { from: "ai", text: plugins[type](text) },
-      ]);
-      return;
-    }
-
-    const chat = chats.find((c) => c.id === activeChat);
-    updateChat([
-      ...chat.messages,
-      { from: "ai", text: plugins[type](text) },
-    ]);
-  };
-
-  // -----------------------------------
-  // File upload + Image Upload
-  // -----------------------------------
-  const sendImage = (file) => {
+  // ---------------------------
+  // File Upload
+  // ---------------------------
+  const sendImage = file => {
     const reader = new FileReader();
-
     reader.onload = () => {
-      const imgMsg = {
-        from: "user",
-        type: "image",
-        url: reader.result,
-      };
+      const imgMsg = { from: "user", type: "image", url: reader.result };
 
       if (isGuest) {
-        setGuestMessages((p) => [...p, imgMsg]);
+        setGuestMessages(p => [...p, imgMsg]);
       } else {
-        const chat = chats.find((c) => c.id === activeChat);
+        const chat = chats.find(c => c.id === activeChat);
         updateChat([...chat.messages, imgMsg]);
       }
-
-      fakeImageAI();
     };
-
     reader.readAsDataURL(file);
   };
 
-  const fakeImageAI = () => {
-    const response = {
-      from: "ai",
-      text: dict.image_ai_response,
-    };
-
-    if (isGuest) {
-      setGuestMessages((p) => [...p, response]);
-    } else {
-      const chat = chats.find((c) => c.id === activeChat);
-      updateChat([...chat.messages, response]);
-    }
-  };
-
-  const handleFileUpload = (file) => {
-    const msg = {
-      from: "user",
-      type: "file",
-      name: file.name,
-      size: file.size,
-    };
-
-    if (isGuest) {
-      setGuestMessages((p) => [...p, msg]);
-    } else {
-      const chat = chats.find((c) => c.id === activeChat);
-      updateChat([...chat.messages, msg]);
-    }
-
-    setTimeout(() => {
-      const aiMsg = {
-        from: "ai",
-        text: `📄 File received: ${file.name}`,
-      };
-
-      if (isGuest) setGuestMessages((p) => [...p, aiMsg]);
-      else {
-        const chat = chats.find((c) => c.id === activeChat);
-        updateChat([...chat.messages, aiMsg]);
-      }
-    }, 300);
-  };
-
-  // -----------------------------------
+  // ---------------------------
   // SEND MESSAGE
-  // -----------------------------------
+  // ---------------------------
   const sendMessage = () => {
     if (!input.trim()) return;
 
@@ -183,101 +118,84 @@ export default function Chat() {
       }
     }
 
-    // ---------- Guest Mode ----------
+    // Guest Mode
     if (isGuest) {
-      const count = guestMessages.filter((m) => m.from === "user").length;
+      const count = guestMessages.filter(m => m.from === "user").length;
 
       if (count >= guestLimit) {
-        setGuestMessages((p) => [...p, { from: "ai", text: dict.guest_limit }]);
+        setGuestMessages(p => [...p, { from: "ai", text: dict.guest_limit }]);
         return;
       }
 
-      setGuestMessages((p) => [...p, { from: "user", text: input }]);
+      setGuestMessages(p => [...p, { from: "user", text: input }]);
       setInput("");
 
-      if ((count + 1) % 3 === 0) {
-        setGuestMessages((p) => [...p, { from: "ai", text: dict.upgrade_prompt }]);
-      }
-
       setTimeout(() => {
-        setGuestMessages((p) => [...p, { from: "ai", text: dict.chat_ai_response }]);
+        setGuestMessages(p => [
+          ...p,
+          { from: "ai", text: dict.chat_ai_response }
+        ]);
       }, 400);
 
       return;
     }
 
-    // ---------- Logged-in mode ----------
-    const chat = chats.find((c) => c.id === activeChat);
+    // Logged-in mode
+    const chat = chats.find(c => c.id === activeChat);
     if (!chat) return;
 
-    const limit = user.planDetails.maxMessages;
-    if (limit !== Infinity && chat.messages.length >= limit) {
-      updateChat([...chat.messages, { from: "ai", text: dict.limit_reached }]);
-      return;
-    }
+    const userMsg = { from: "user", text: input };
+    const msgs = [...chat.messages, userMsg];
 
-    updateChat([...chat.messages, { from: "user", text: input }]);
+    updateChat(msgs);
     setInput("");
 
-    // Generate dynamic title (first user message)
+    // Auto-title
     if (chat.title === "New Chat") {
       const newTitle = generateTitle(input);
-      setChats((prev) =>
-        prev.map((c) =>
+      setChats(prev =>
+        prev.map(c =>
           c.id === chat.id ? { ...c, title: newTitle } : c
         )
       );
     }
 
-    // Fake response typing
+    // Apply persona → memory → typing effect
     setTimeout(() => {
-      let full = `${dict.chat_ai_response} (${persona}, ${model})`;
-      let i = 0;
+      let response = `${dict.chat_ai_response} (${model})`;
+      response = applyPersona(persona, response);
 
+      let i = 0;
       const typer = setInterval(() => {
         i++;
+        updateChat([...msgs, { from: "ai", text: response.slice(0, i) }]);
 
-        updateChat([
-          ...chat.messages,
-          { from: "user", text: input },
-          { from: "ai", text: full.slice(0, i) },
-        ]);
-
-        if (i >= full.length) clearInterval(typer);
+        if (i >= response.length) clearInterval(typer);
       }, 20);
-    }, 400);
+    }, 300);
   };
 
-  // -----------------------------------
-  // RENDER MESSAGES
-  // -----------------------------------
+  // ---------------------------
+  // Render messages
+  // ---------------------------
   const renderMessages = () => {
     if (isGuest) {
       return guestMessages.map((msg, i) => (
-        <MessageBubble
-          key={i}
-          msg={msg}
-          lang={lang}
-          dict={dict}
-          onPlugin={runPlugin}
-        />
+        <MessageBubble key={i} msg={msg} dict={dict} lang={lang} />
       ));
     }
 
-    const chat = chats.find((c) => c.id === activeChat);
+    const chat = chats.find(c => c.id === activeChat);
     if (!chat) return null;
 
     return chat.messages.map((msg, i) => (
-      <MessageBubble
-        key={i}
-        msg={msg}
-        lang={lang}
-        dict={dict}
-        onPlugin={runPlugin}
-      />
+      <MessageBubble key={i} msg={msg} dict={dict} lang={lang} />
     ));
   };
 
+  // ---------------------------
+  // UI
+  // ---------------------------
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       {!isGuest && (
@@ -294,57 +212,32 @@ export default function Chat() {
           {dict.chat_title} {isGuest && "(Guest Mode)"}
         </h2>
 
-        {/* Guest message counter */}
-        {isGuest && (
-          <div className="alert alert-info">
-            {dict.remaining_messages}:{" "}
-            {guestLimit - guestMessages.filter((m) => m.from === "user").length}
-          </div>
-        )}
-
-        {/* Only logged-in users see persona/model selection */}
         {!isGuest && (
           <>
-            <PersonaSelector persona={persona} setPersona={setPersona} />
+            <PersonaSelector
+              personas={personas}
+              activePersona={activePersona}
+              setActivePersona={setActivePersona}
+            />
+
             <ModelSelector model={model} setModel={setModel} />
           </>
         )}
 
-        {/* Chat messages */}
-        <div
-          className="border rounded-4 shadow-sm p-3 mb-3"
-          style={{ height: "60vh", overflowY: "auto" }}
-        >
+        <div className="border rounded-4 shadow-sm p-3 mb-3" style={{ height: "60vh", overflowY: "auto" }}>
           {renderMessages()}
           <div ref={chatEndRef}></div>
         </div>
 
-        {/* Input box */}
         <div className="input-group gap-2">
           <VoiceRecorder setInput={setInput} />
 
           <input
             className="form-control"
-            placeholder={dict.chat_placeholder}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          />
-
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => sendImage(e.target.files[0])}
-            className="form-control"
-            style={{ maxWidth: 180 }}
-          />
-
-          <input
-            type="file"
-            accept=".pdf,.txt,.doc,.docx"
-            onChange={(e) => handleFileUpload(e.target.files[0])}
-            className="form-control"
-            style={{ maxWidth: 180 }}
+            placeholder={dict.chat_placeholder}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendMessage()}
           />
 
           <button className="btn btn-primary px-4" onClick={sendMessage}>
