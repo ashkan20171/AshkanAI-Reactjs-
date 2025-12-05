@@ -13,15 +13,19 @@ import MessageBubble from "../components/MessageBubble";
 import { generateTitle } from "../utils/titleGenerator";
 import { plugins } from "../utils/pluginEngine";
 import { applyPersona } from "../utils/personaEngine";
+import { detectPersona } from "../utils/autoPersonaDetector";
+import { applyAffinityLayers } from "../utils/affinityMemoryEngine";
+import { detectEmotion } from "../utils/emotionDetector";
+import { applyEmotionLayer } from "../utils/emotionEngine";
 
 export default function Chat() {
   const { dict, lang } = useLanguage();
   const { user } = useAuth();
-  const { memory, setMemory } = useMemory();
+  const { memory, setMemory, addInterest, pushTopic } = useMemory();
 
-  // Persona Context
+  // Persona
   const { personas, activePersona, setActivePersona } = usePersona();
-  const persona = personas.find((p) => p.id === activePersona);
+  const persona = personas.find(p => p.id === activePersona);
 
   // Guest mode
   const isGuest = !user;
@@ -52,10 +56,9 @@ export default function Chat() {
 
   const [input, setInput] = useState("");
   const [model, setModel] = useState("gpt4");
-
   const chatEndRef = useRef(null);
 
-  // Scroll always
+  // Scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [guestMessages, chats]);
@@ -63,73 +66,71 @@ export default function Chat() {
   // Memory extraction
   useEffect(() => {
     const t = input.toLowerCase();
+
     if (t.includes("my name is")) {
       const name = input.split("is")[1]?.trim();
-      if (name) setMemory((prev) => ({ ...prev, name }));
+      if (name) setMemory(p => ({ ...p, name }));
+    }
+
+    if (t.includes("i like")) {
+      const interest = input.split("i like")[1]?.trim();
+      if (interest) addInterest(interest);
     }
   }, [input]);
 
-  // ------------------------------------
-  // UPDATE LOGGED-IN CHAT
-  // ------------------------------------
-  const updateChat = (msgs) => {
-    setChats((prev) => {
-      const updated = prev.map((c) =>
+  // Update chat
+  const updateChat = msgs => {
+    setChats(prev => {
+      const updated = prev.map(c =>
         c.id === activeChat ? { ...c, messages: msgs } : c
       );
-
       localStorage.setItem("ashkanai_chats", JSON.stringify(updated));
       return updated;
     });
   };
 
-  // ------------------------------------
-  // SEND MESSAGE
-  // ------------------------------------
+  // Send Message
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    // Commands
+    // Plugins
     if (input.startsWith("/")) {
       const [cmd, ...rest] = input.slice(1).split(" ");
       const text = rest.join(" ");
 
       if (plugins[cmd]) {
         const result = plugins[cmd](text);
-        if (isGuest) {
-          setGuestMessages((p) => [...p, { from: "ai", text: result }]);
-        } else {
-          const chat = chats.find((c) => c.id === activeChat);
-          updateChat([...chat.messages, { from: "ai", text: result }]);
+        if (isGuest) setGuestMessages(m => [...m, { from: "ai", text: result }]);
+        else {
+          const c = chats.find(c => c.id === activeChat);
+          updateChat([...c.messages, { from: "ai", text: result }]);
         }
         setInput("");
         return;
       }
     }
 
-    // ------------------ Guest ------------------
+    // Guest mode
     if (isGuest) {
-      const count = guestMessages.filter((m) => m.from === "user").length;
+      const count = guestMessages.filter(m => m.from === "user").length;
 
       if (count >= guestLimit) {
-        setGuestMessages((p) => [...p, { from: "ai", text: dict.guest_limit }]);
+        setGuestMessages(p => [...p, { from: "ai", text: dict.guest_limit }]);
         return;
       }
 
-      setGuestMessages((p) => [...p, { from: "user", text: input }]);
+      setGuestMessages(p => [...p, { from: "user", text: input }]);
       setInput("");
 
       setTimeout(() => {
-        setGuestMessages((p) => [...p, { from: "ai", text: dict.chat_ai_response }]);
+        setGuestMessages(p => [...p, { from: "ai", text: dict.chat_ai_response }]);
       }, 400);
 
       return;
     }
 
-    // ------------------ Logged-in ------------------
-    const chat = chats.find((c) => c.id === activeChat);
-    if (!chat) return;
-
+    // Logged-in mode
+    const chat = chats.find(c => c.id === activeChat);
     const userMsg = { from: "user", text: input };
     const baseMsgs = [...chat.messages, userMsg];
 
@@ -138,50 +139,59 @@ export default function Chat() {
 
     // Auto-title
     if (chat.title === "New Chat") {
-      const newTitle = generateTitle(input);
-      setChats((prev) =>
-        prev.map((c) =>
-          c.id === chat.id ? { ...c, title: newTitle } : c
+      setChats(prev =>
+        prev.map(c =>
+          c.id === chat.id ? { ...c, title: generateTitle(input) } : c
         )
       );
+    }
+
+    // Auto persona detection
+    const detected = detectPersona(input);
+    if (detected && detected !== activePersona) {
+      setActivePersona(detected);
+      updateChat([
+        ...baseMsgs,
+        { from: "system", text: `🔄 Auto persona switched to: ${detected}` }
+      ]);
     }
 
     // AI Response
     setTimeout(() => {
       let response = `${dict.chat_ai_response} (${model})`;
 
-      // Apply persona logic
+      // persona layer
       response = applyPersona(persona, response);
+
+      // memory
+      response = applyAffinityLayers(response, memory);
+
+      // emotion
+      const emotion = detectEmotion(input);
+      response = applyEmotionLayer(response, emotion);
 
       let i = 0;
       const typer = setInterval(() => {
         i++;
         updateChat([...baseMsgs, { from: "ai", text: response.slice(0, i) }]);
-
         if (i >= response.length) clearInterval(typer);
-      }, 20);
-    }, 300);
+      }, 18);
+    }, 250);
   };
 
-  // Render messages
+  // Render
   const renderMessages = () => {
-    if (isGuest) {
+    if (isGuest)
       return guestMessages.map((msg, i) => (
         <MessageBubble key={i} msg={msg} dict={dict} lang={lang} />
       ));
-    }
 
-    const chat = chats.find((c) => c.id === activeChat);
-    if (!chat) return null;
-
-    return chat.messages.map((msg, i) => (
+    const chat = chats.find(c => c.id === activeChat);
+    return chat?.messages?.map((msg, i) => (
       <MessageBubble key={i} msg={msg} dict={dict} lang={lang} />
     ));
   };
 
-  // ------------------------------------
-  // UI
-  // ------------------------------------
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       {!isGuest && (
@@ -205,12 +215,14 @@ export default function Chat() {
               activePersona={activePersona}
               setActivePersona={setActivePersona}
             />
-
             <ModelSelector model={model} setModel={setModel} />
           </>
         )}
 
-        <div className="border rounded-4 shadow-sm p-3 mb-3" style={{ height: "60vh", overflowY: "auto" }}>
+        <div
+          className="border rounded-4 shadow-sm p-3 mb-3"
+          style={{ height: "60vh", overflowY: "auto" }}
+        >
           {renderMessages()}
           <div ref={chatEndRef}></div>
         </div>
@@ -222,8 +234,8 @@ export default function Chat() {
             className="form-control"
             value={input}
             placeholder={dict.chat_placeholder}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendMessage()}
           />
 
           <button className="btn btn-primary px-4" onClick={sendMessage}>
