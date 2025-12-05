@@ -98,5 +98,18 @@
 
   "limit_reached": "You have reached the message limit for your current plan. Upgrade to continue chatting.",
 
-  "no_access_agent": "Your plan does not include access to Task Agent."
+  "no_access_agent": "Your plan does not include access to Task Agent.",
+
+  "voice_not_supported": "Voice recognition is not supported in this browser.",
+
+  "copy": "Copy",
+  "regenerate": "Regenerate Response",
+
+  "guest_limit": "You have reached the free chat limit. Please log in to continue.",
+
+  "guest_mode": "You are using Guest Mode. Login for more features." ,
+
+  "upgrade_prompt": "Unlock unlimited messages, image generation and more — Login or Sign Up.",
+
+  "remaining_messages": "Remaining guest messages"
 }

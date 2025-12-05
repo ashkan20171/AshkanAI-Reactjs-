@@ -3,8 +3,9 @@ import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 
+
 export default function Login() {
-  const { login } = useAuth();
+  const { login, continueAsGuest } = useAuth();
   const { dict } = useLanguage();
   const navigate = useNavigate();
 
@@ -57,6 +58,12 @@ export default function Login() {
           <button className="btn btn-primary w-100 py-2">
             {dict.login}
           </button>
+<button
+  className="btn btn-outline-secondary w-100 mt-3"
+  onClick={continueAsGuest}
+>
+  Continue as Guest
+</button>
 
           <div className="text-center mt-3">
             <small>

@@ -6,6 +6,19 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
+  const isGuestUser = {
+  plan: "guest",
+  planDetails: {
+    name: "Guest",
+    maxMessages: 5,
+    allowImageGen: false,
+    allowCodeAssistant: false,
+    allowTaskAgent: false
+  }
+};
+const continueAsGuest = () => {
+  setUser(isGuestUser);
+};
   // اضافه کردن planDetails به کاربر
   const enhanceUser = (userObj) => {
     if (!userObj) return null;
@@ -60,6 +73,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, register, login, logout }}>
+        <AuthContext.Provider value={{ user, register, login, logout, continueAsGuest }}></AuthContext.Provider>
       {children}
     </AuthContext.Provider>
   );

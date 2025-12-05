@@ -2,118 +2,219 @@ import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 
+import ChatSidebar from "../components/ChatSidebar";
+import PersonaSelector from "../components/PersonaSelector";
+import ModelSelector from "../components/ModelSelector";
+import VoiceRecorder from "../components/VoiceRecorder";
+import MessageBubble from "../components/MessageBubble";
+
+import { useMemory } from "../context/MemoryContext";
+import { usePersona } from "../context/PersonaContext";
+
 export default function Chat() {
   const { dict, lang } = useLanguage();
   const { user } = useAuth();
+  const { memory, setMemory } = useMemory();
 
-  const [messages, setMessages] = useState([
-    { from: "ai", text: dict.chat_welcome }
-  ]);
+  // --- Guest Mode ---
+  const isGuest = !user || user.plan === "guest";
+  const guestLimit = 10;
+
+  const [guestMessages, setGuestMessages] = useState(() => {
+    if (!isGuest) return [];
+    const saved = localStorage.getItem("ashkanai_guest_chat");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    if (isGuest) {
+      localStorage.setItem(
+        "ashkanai_guest_chat",
+        JSON.stringify(guestMessages)
+      );
+    }
+  }, [guestMessages]);
+
+  // --- Logged-in Chat System ---
+  const [chats, setChats] = useState(() => {
+    if (isGuest) return [];
+    const saved = localStorage.getItem("ashkanai_chats");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activeChat, setActiveChat] = useState(() => {
+    if (isGuest) return "guest";
+    return chats[0]?.id || null;
+  });
 
   const [input, setInput] = useState("");
+  const [persona, setPersona] = useState("assistant");
+  const [model, setModel] = useState("gpt4");
 
   const chatEndRef = useRef(null);
 
-  // Auto scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [guestMessages, chats]);
 
-  // If language changes, update first message
+  // Memory extraction
   useEffect(() => {
-    setMessages([{ from: "ai", text: dict.chat_welcome }]);
-  }, [dict.chat_welcome]);
+    if (input.toLowerCase().includes("my name is")) {
+      const name = input.split("is")[1]?.trim();
+      if (name) setMemory({ ...memory, name });
+    }
+  }, [input]);
 
+  // -----------------------------------
+  // SEND MESSAGE (Guest + Logged-in)
+  // -----------------------------------
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    const messagesUsed = messages.length;
-    const limit = user.planDetails.maxMessages;
+    // ---------------- Guest Mode Limit ----------------
+    if (isGuest) {
+      const userCount = guestMessages.filter(m => m.from === "user").length;
 
-    // Check plan limits
-    if (limit !== Infinity && messagesUsed >= limit) {
-      setMessages(m => [
-        ...m,
-        { from: "ai", text: dict.limit_reached }
-      ]);
+      if (userCount >= guestLimit) {
+        setGuestMessages(prev => [
+          ...prev,
+          { from: "ai", text: dict.guest_limit }
+        ]);
+        return;
+      }
+
+      const userMsg = { from: "user", text: input };
+      setGuestMessages(prev => [...prev, userMsg]);
+      setInput("");
+
+      // Upgrade prompt every 3 messages
+      if ((userCount + 1) % 3 === 0) {
+        setGuestMessages(prev => [
+          ...prev,
+          { from: "ai", text: dict.upgrade_prompt }
+        ]);
+      }
+
+      // Fake AI response
+      setTimeout(() => {
+        setGuestMessages(prev => [
+          ...prev,
+          { from: "ai", text: dict.chat_ai_response }
+        ]);
+      }, 400);
+
       return;
     }
 
-    // Add user message
-    setMessages(m => [...m, { from: "user", text: input }]);
+    // ---------------- Logged-in Mode ----------------
+    const chat = chats.find(c => c.id === activeChat);
+    if (!chat) return;
+
+    const limit = user.planDetails.maxMessages;
+    if (limit !== Infinity && chat.messages.length >= limit) {
+      updateChat([...chat.messages, { from: "ai", text: dict.limit_reached }]);
+      return;
+    }
+
+    const userMsg = { from: "user", text: input };
+    const loading = { from: "ai", text: "..." };
+
+    updateChat([...chat.messages, userMsg, loading]);
     setInput("");
 
-    // Fake AI response
     setTimeout(() => {
-      setMessages(m => [
-        ...m,
-        { from: "ai", text: dict.chat_ai_response }
-      ]);
-    }, 600);
+      let full = `${dict.chat_ai_response} (${persona}, ${model})`;
+      let index = 0;
+
+      const typer = setInterval(() => {
+        index++;
+        updateChat([
+          ...chat.messages,
+          userMsg,
+          { from: "ai", text: full.slice(0, index) }
+        ]);
+
+        if (index >= full.length) clearInterval(typer);
+      }, 20);
+    }, 400);
   };
 
-  const handleKey = (e) => {
-    if (e.key === "Enter") sendMessage();
+  const updateChat = msgs => {
+    setChats(prev =>
+      prev.map(c => (c.id === activeChat ? { ...c, messages: msgs } : c))
+    );
+  };
+
+  const renderMessages = () => {
+    if (isGuest) {
+      return guestMessages.map((msg, i) => (
+        <MessageBubble key={i} msg={msg} lang={lang} dict={dict} />
+      ));
+    }
+
+    const chat = chats.find(c => c.id === activeChat);
+    if (!chat) return null;
+
+    return chat.messages.map((msg, i) => (
+      <MessageBubble key={i} msg={msg} lang={lang} dict={dict} />
+    ));
   };
 
   return (
-    <div
-      className="container py-4"
-      style={{ direction: lang === "fa" ? "rtl" : "ltr" }}
-    >
-      <h2 className="fw-bold text-center mb-4">{dict.chat_title}</h2>
-
-      {/* Chat window */}
-      <div
-        className="border rounded-4 shadow-sm p-3 mb-3"
-        style={{
-          height: "70vh",
-          overflowY: "auto",
-          background: "#fafafa",
-        }}
-      >
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`d-flex mb-3 ${
-              msg.from === "user"
-                ? lang === "fa"
-                  ? "justify-content-start"
-                  : "justify-content-end"
-                : "justify-content-start"
-            }`}
-          >
-            <div
-              className={`p-3 rounded-4 ${
-                msg.from === "user"
-                  ? "bg-primary text-white"
-                  : "bg-white border"
-              }`}
-              style={{ maxWidth: "75%", lineHeight: "1.8" }}
-            >
-              {msg.text}
-            </div>
-          </div>
-        ))}
-
-        <div ref={chatEndRef}></div>
-      </div>
-
-      {/* Input */}
-      <div className="input-group">
-        <input
-          className="form-control rounded-start-pill"
-          placeholder={dict.chat_placeholder}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
+    <div style={{ display: "flex", height: "100vh" }}>
+      {!isGuest && (
+        <ChatSidebar
+          chats={chats}
+          setChats={setChats}
+          activeChat={activeChat}
+          setActiveChat={setActiveChat}
         />
-        <button
-          className="btn btn-primary rounded-end-pill px-4"
-          onClick={sendMessage}
+      )}
+
+      <div
+        className="flex-grow-1 p-4"
+        style={{ direction: lang === "fa" ? "rtl" : "ltr" }}
+      >
+        <h2 className="fw-bold mb-3">
+          {dict.chat_title} {isGuest && "(Guest Mode)"}
+        </h2>
+
+        {isGuest && (
+          <div className="alert alert-info">
+            {dict.remaining_messages}:{" "}
+            {guestLimit -
+              guestMessages.filter(m => m.from === "user").length}
+          </div>
+        )}
+
+        {!isGuest && (
+          <>
+            <PersonaSelector persona={persona} setPersona={setPersona} />
+            <ModelSelector model={model} setModel={setModel} />
+          </>
+        )}
+
+        <div
+          className="border rounded-4 shadow-sm p-3 mb-3"
+          style={{ height: "60vh", overflowY: "auto", background: "#fafafa" }}
         >
-          {dict.chat_send}
-        </button>
+          {renderMessages()}
+          <div ref={chatEndRef}></div>
+        </div>
+
+        <div className="input-group">
+          <VoiceRecorder setInput={setInput} />
+          <input
+            className="form-control"
+            placeholder={dict.chat_placeholder}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendMessage()}
+          />
+          <button className="btn btn-primary px-4" onClick={sendMessage}>
+            {dict.chat_send}
+          </button>
+        </div>
       </div>
     </div>
   );
