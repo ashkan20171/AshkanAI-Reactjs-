@@ -1,45 +1,80 @@
+import React from "react";
 import { Link } from "react-router-dom";
-import logo from "../assets/logo/ashkanai-light.png";
-import { useLanguage } from "../context/LanguageContext";
+import heroImg from "../assets/hero.png";
 
 export default function Home() {
-  const { dict, lang } = useLanguage();
-
   return (
-    <div className="container py-5 fade-in">
+    <div className="landing-page">
 
-      <div className="text-center mb-5">
-        <img
-          src={logo}
-          alt="AshkanAI"
-          style={{ width: 140, marginBottom: 25 }}
-        />
+      {/* HERO SECTION */}
+      <section className="hero">
+        <div className="hero-content">
+          <h1>
+            <span>AshkanAI</span>  
+            هوش مصنوعی حرفه‌ای شما
+          </h1>
 
-        <h1 className="display-4 fw-bold mb-3">
-          {dict.welcome_title_1}{" "}
-          <span className="text-primary">{dict.welcome_title_2}</span>
-        </h1>
+          <p>
+            سریع‌ترین و هوشمندترین دستیار فارسی که پیام می‌فهمه،  
+            تصویر می‌سازه، کد می‌نویسه و برای همه کارها کمکت می‌کنه.
+          </p>
 
-        <p
-          className="lead text-muted mb-4"
-          style={{ maxWidth: 680, margin: "0 auto", lineHeight: "1.8" }}
-        >
-          {dict.description_line1}
-          <br />
-          {dict.description_line2}
-        </p>
+          <div className="hero-buttons">
+            <Link to="/chat" className="btn-primary">شروع گفتگو</Link>
+            <Link to="/plans" className="btn-secondary">پلن‌های حرفه‌ای</Link>
+          </div>
+        </div>
 
-        <Link
-          className="btn btn-primary btn-lg px-5 py-2 shadow rounded-pill mt-3"
-          to="/dashboard"
-        >
-          {dict.enter_dashboard}
+        <div className="hero-image glass parallax">
+          <img src={heroImg} alt="AI Hero" />
+        </div>
+      </section>
+
+      {/* FEATURES SECTION */}
+      <section className="features">
+        <h2>✨ امکانات شگفت‌انگیز</h2>
+
+        <div className="features-grid">
+          <div className="feature-card glass">
+            <span>🤖</span>
+            <h3>گفتگو هوشمند</h3>
+            <p>سریع، دقیق و باهوش. تجربه چت طبیعی با هوش مصنوعی.</p>
+          </div>
+
+          <div className="feature-card glass">
+            <span>🧑‍💻</span>
+            <h3>دستیار کدنویسی</h3>
+            <p>ساخت کد، دیباگ و تحلیل پروژه‌ها با یک کلیک.</p>
+          </div>
+
+          <div className="feature-card glass">
+            <span>🎨</span>
+            <h3>ساخت تصویر</h3>
+            <p>با یک جمله، هر تصویری که میخوای بساز.</p>
+          </div>
+
+          <div className="feature-card glass">
+            <span>📄</span>
+            <h3>تحلیل اسناد</h3>
+            <p>آپلود PDF و فایل و دریافت خلاصه هوشمند.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* PLANS PREVIEW */}
+      <section className="plans-preview">
+        <h2>🔥 پلن مورد نیازت رو انتخاب کن</h2>
+        <p>از کاربر مهمان تا حرفه‌ای، برای هر کسی یک پلن هست.</p>
+
+        <Link to="/plans" className="btn-primary big-btn">
+          مشاهده پلن‌ها
         </Link>
-      </div>
+      </section>
 
-      <div className="text-center text-muted mt-5">
-        © 2025 AshkanAI — {dict.rights_reserved}
-      </div>
+      {/* FOOTER */}
+      <footer className="footer">
+        <p>© 2024 AshkanAI — تمام حقوق محفوظ است</p>
+      </footer>
     </div>
   );
 }

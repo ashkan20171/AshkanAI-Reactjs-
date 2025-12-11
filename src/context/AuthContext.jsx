@@ -6,16 +6,38 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  // کاربر مهمان
+  // تاریخچه چت‌ها (فقط عنوان‌ها)
+  const [history, setHistory] = useState([]);
+
+  // ===============================
+  // 🔹 افزودن چت جدید به تاریخچه
+  // ===============================
+  const addToHistory = (title) => {
+    const newEntry = { id: Date.now(), title };
+    const updated = [...history, newEntry];
+
+    setHistory(updated);
+    localStorage.setItem("chat_titles", JSON.stringify(updated));
+  };
+
+  // ===============================
+  // 🔹 افزودن اطلاعات پلن به کاربر
+  // ===============================
+  const enhanceUser = (u) => {
+    if (!u) return null;
+
+    return {
+      ...u,
+      planDetails: plans[u.plan] || plans.free,
+    };
+  };
+
+  // ===============================
+  // 🔹 کاربر مهمان
+  // ===============================
   const guestUser = {
     plan: "guest",
-    planDetails: {
-      name: "Guest",
-      maxMessages: 5,
-      allowImageGen: false,
-      allowCodeAssistant: false,
-      allowTaskAgent: false
-    }
+    planDetails: plans.guest,
   };
 
   const continueAsGuest = () => {
@@ -23,30 +45,32 @@ export function AuthProvider({ children }) {
     setUser(guestUser);
   };
 
-  // افزودن planDetails به یوزر
-  const enhanceUser = (userObj) => {
-    if (!userObj) return null;
-
-    return {
-      ...userObj,
-      planDetails: plans[userObj.plan] || plans.free
-    };
-  };
-
-  // لود کاربر از localStorage
+  // ===============================
+  // 🔹 لود اولیه کاربر + تاریخچه
+  // ===============================
   useEffect(() => {
     const savedUser = localStorage.getItem("ashkanai_user");
     if (savedUser) {
-      setUser(enhanceUser(JSON.parse(savedUser)));
+      const parsed = JSON.parse(savedUser);
+      setUser(enhanceUser(parsed));
+    }
+
+    const savedHistory = localStorage.getItem("chat_titles");
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory));
     }
   }, []);
 
-  // ثبت‌نام
+  // ===============================
+  // 🔹 ثبت‌نام
+  // ===============================
   const register = (info) => {
     const users = JSON.parse(localStorage.getItem("ashkanai_users")) || [];
 
-    // پیش‌فرض کاربر جدید Free است
-    const newUser = { ...info, plan: "free" };
+    const newUser = {
+      ...info,
+      plan: "free",
+    };
 
     users.push(newUser);
 
@@ -56,13 +80,13 @@ export function AuthProvider({ children }) {
     setUser(enhanceUser(newUser));
   };
 
-  // لاگین
+  // ===============================
+  // 🔹 ورود
+  // ===============================
   const login = (email, password) => {
     const users = JSON.parse(localStorage.getItem("ashkanai_users")) || [];
 
-    const found = users.find(
-      (u) => u.email === email && u.password === password
-    );
+    const found = users.find((u) => u.email === email && u.password === password);
 
     if (!found) return false;
 
@@ -72,23 +96,33 @@ export function AuthProvider({ children }) {
     return true;
   };
 
-  // خروج
+  // ===============================
+  // 🔹 خروج
+  // ===============================
   const logout = () => {
     localStorage.removeItem("ashkanai_user");
     setUser(null);
   };
 
+  // ===============================
+  // 🔹 خروجی Provider
+  // ===============================
   return (
     <AuthContext.Provider
-  value={{
-    user,
-    setUser,    // ←← اینو اضافه کن
-    register,
-    login,
-    logout,
-    continueAsGuest,
-  }}
->
+      value={{
+        user,
+        setUser,
+
+        register,
+        login,
+        logout,
+        continueAsGuest,
+
+        history,
+        addToHistory,
+        setHistory,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

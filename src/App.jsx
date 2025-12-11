@@ -45,6 +45,11 @@ const App = () => {
                </ProtectedRoute>
                  }
                  />
+<Router>
+  <Sidebar />    {/* ⇐ این را اضافه کن */}
+  <Navbar />
+  <Routes>...</Routes>
+</Router>
 
 
           <Route path="*" element={<Login />} />

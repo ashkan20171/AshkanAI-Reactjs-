@@ -31,3 +31,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </LanguageProvider>
   </React.StrictMode>
 );
+useEffect(() => {
+  const hour = new Date().getHours();
+  if (hour >= 19 || hour <= 6) {
+    document.body.classList.add("dark");
+  }
+}, []);
