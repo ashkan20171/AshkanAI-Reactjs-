@@ -1,73 +1,74 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { useLanguage } from "../context/LanguageContext";
 
 export default function Register() {
-  const { dict } = useLanguage();
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [info, setInfo] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
 
-  const submit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    register({ name, email, password, plan: "free" });
+    register(info);
     navigate("/dashboard");
   };
 
   return (
-    <div
-      className="container d-flex justify-content-center align-items-center"
-      style={{ minHeight: "80vh" }}
-    >
-      <div className="card shadow p-4 rounded-4" style={{ width: 420 }}>
-        <h3 className="fw-bold mb-4 text-center">{dict.signup}</h3>
+    <div className="auth-page full-center">
+      <div className="auth-card glass">
 
-        <form onSubmit={submit}>
-          <div className="mb-3">
-            <label className="form-label">{dict.fullname}</label>
+        <h2 className="title">ایجاد حساب</h2>
+        <p className="subtitle">به AshkanAI خوش آمدی 🤖✨</p>
+
+        <form onSubmit={handleSubmit} className="auth-form">
+
+          <div className="input-group">
+            <span>👤</span>
             <input
-              className="form-control"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="text"
+              placeholder="نام شما"
+              value={info.name}
+              onChange={(e) => setInfo({ ...info, name: e.target.value })}
               required
             />
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">{dict.email}</label>
+          <div className="input-group">
+            <span>📧</span>
             <input
               type="email"
-              className="form-control"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ایمیل"
+              value={info.email}
+              onChange={(e) => setInfo({ ...info, email: e.target.value })}
               required
             />
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">{dict.password}</label>
+          <div className="input-group">
+            <span>🔒</span>
             <input
               type="password"
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder="رمز عبور"
+              value={info.password}
+              onChange={(e) => setInfo({ ...info, password: e.target.value })}
               required
             />
           </div>
 
-          <button className="btn btn-primary w-100 py-2">{dict.signup}</button>
-
-          <div className="text-center mt-3">
-            <small>
-              {dict.have_account}{" "}
-              <Link to="/login">{dict.login}</Link>
-            </small>
-          </div>
+          <button className="auth-btn" type="submit">
+            ثبت‌نام
+          </button>
         </form>
+
+        <div className="auth-footer">
+          قبلاً ثبت‌نام کردی؟ <Link to="/login">وارد شو</Link>
+        </div>
+
       </div>
     </div>
   );

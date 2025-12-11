@@ -80,14 +80,15 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        register,
-        login,
-        logout,
-        continueAsGuest,
-      }}
-    >
+  value={{
+    user,
+    setUser,    // ←← اینو اضافه کن
+    register,
+    login,
+    logout,
+    continueAsGuest,
+  }}
+>
       {children}
     </AuthContext.Provider>
   );

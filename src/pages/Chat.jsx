@@ -1,30 +1,40 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+import botAvatar from "../assets/bot.png";
+import userAvatar from "../assets/user.png";
 
 const Chat = () => {
   const { user } = useAuth();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const messagesEndRef = useRef(null);
 
   if (!user) {
     return (
-      <div style={{ padding: "20px", color: "red" }}>
-        لطفا وارد شوید یا به صورت مهمان ادامه دهید
+      <div className="login-warning">
+        لطفاً وارد شوید یا به صورت مهمان ادامه دهید
       </div>
     );
   }
 
   const plan = user.planDetails;
+  const max = plan.maxMessages;
+  const used = messages.length;
+  const remaining = max === Infinity ? Infinity : max - used;
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSend = () => {
     if (!input.trim()) return;
-
-    // محدودیت تعداد پیام بر اساس پلن
-    if (messages.length >= plan.maxMessages && plan.maxMessages !== Infinity) {
-      alert("به حداکثر تعداد پیام‌های مجاز پلن خود رسیده‌اید.");
-      return;
-    }
+    if (remaining <= 0) return;
 
     const newMessage = {
       id: Date.now(),
@@ -32,74 +42,105 @@ const Chat = () => {
       sender: "user",
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInput("");
+
+    setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: "در حال پردازش درخواست شما...",
+          sender: "bot",
+        },
+      ]);
+    }, 500);
   };
 
   return (
-    <div className="chat-container">
+    <div className="chat-main">
 
       {/* ابزارها */}
-      <div className="tools-panel">
-        <h3>ابزارها</h3>
+      <div className="tools-panel-pro">
 
-        {/* Code Assistant */}
-        {plan.allowCodeAssistant ? (
-          <button className="tool-btn">🧑‍💻 Code Generator</button>
-        ) : (
-          <button className="tool-btn disabled">
-            🔒 Code Generator (نیاز به ارتقا)
-          </button>
-        )}
+        <h3>ابزارهای AI</h3>
 
-        {/* Image Generator */}
-        {plan.allowImageGen ? (
-          <button className="tool-btn">🖼️ Image Generator</button>
-        ) : (
-          <button className="tool-btn disabled">
-            🔒 Image Generator (نیاز به ارتقا)
-          </button>
-        )}
+        <div className="tool-items">
 
-        {/* Task Agent */}
-        {plan.allowTaskAgent ? (
-          <button className="tool-btn">🤖 Task Agent</button>
-        ) : (
-          <button className="tool-btn disabled">
-            🔒 Task Agent (نیاز به ارتقا)
-          </button>
-        )}
-
-        {/* دکمه ارتقا پلن */}
-        {(user.plan === "guest" || user.plan === "free") && (
-          <button className="upgrade-btn">
-            🚀 ارتقا به پلن حرفه‌ای
-          </button>
-        )}
-      </div>
-
-      {/* ناحیه چت */}
-      <div className="chat-box">
-        {messages.length === 0 && (
-          <div className="empty">پیامی وجود ندارد...</div>
-        )}
-
-        {messages.map((msg) => (
-          <div key={msg.id} className="message">
-            {msg.text}
+          {/* Code */}
+          <div className={`tool-card ${!plan.allowCodeAssistant && "locked"}`}>
+            <span>🧑‍💻</span>
+            <p>Code Assistant</p>
+            {!plan.allowCodeAssistant && <Link to="/plans">ارتقا</Link>}
           </div>
-        ))}
+
+          {/* Image */}
+          <div className={`tool-card ${!plan.allowImageGen && "locked"}`}>
+            <span>🎨</span>
+            <p>Image Generator</p>
+            {!plan.allowImageGen && <Link to="/plans">ارتقا</Link>}
+          </div>
+
+          {/* Task Agent */}
+          <div className={`tool-card ${!plan.allowTaskAgent && "locked"}`}>
+            <span>🤖</span>
+            <p>Task Agent</p>
+            {!plan.allowTaskAgent && <Link to="/plans">ارتقا</Link>}
+          </div>
+
+        </div>
+
+        {(user.plan === "guest" || user.plan === "free") && (
+          <Link to="/plans" className="upgrade-main">
+            🚀 ارتقا به برنامه حرفه‌ای
+          </Link>
+        )}
+
       </div>
 
-      {/* ورودی پیام */}
-      <div className="input-area">
-        <input
-          type="text"
-          placeholder="پیام بنویس..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button onClick={handleSend}>ارسال</button>
+      {/* باکس چت */}
+      <div className="chat-box-pro">
+
+        <div className="remaining-counter">
+          {remaining === Infinity ? (
+            <span>پیام‌ها: نامحدود</span>
+          ) : remaining > 0 ? (
+            <span>پیام‌های باقی‌مانده: {remaining}</span>
+          ) : (
+            <span className="finished">
+              پیام‌های شما تمام شده! <Link to="/plans">ارتقا</Link>
+            </span>
+          )}
+        </div>
+
+        {/* پیام‌ها */}
+        <div className="messages-area">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`msg ${msg.sender}`}>
+              <img
+                src={msg.sender === "user" ? userAvatar : botAvatar}
+                alt=""
+              />
+              <div className="bubble">{msg.text}</div>
+            </div>
+          ))}
+          <div ref={messagesEndRef}></div>
+        </div>
+
+        {/* ورودی چت */}
+        <div className="chat-input-pro">
+          <input
+            type="text"
+            placeholder="پیام خود را بنویسید…"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={remaining <= 0}
+          />
+          <button onClick={handleSend} disabled={remaining <= 0}>
+            ➤
+          </button>
+        </div>
+
       </div>
 
     </div>

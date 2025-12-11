@@ -11,6 +11,8 @@ import { ProjectProvider } from "./context/ProjectContext";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./darkmode.css";
+import "./styles/global.css";
+import "./styles/chatPro.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -1,77 +1,71 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { useLanguage } from "../context/LanguageContext";
-
 
 export default function Login() {
-  const { login, continueAsGuest } = useAuth();
-  const { dict } = useLanguage();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
 
-  const handleLogin = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const ok = login(email, password);
 
-    if (!ok) return setError(dict.invalid_credentials);
+    const success = login(email, password);
+
+    if (!success) {
+      setError("ایمیل یا رمز عبور اشتباه است");
+      return;
+    }
 
     navigate("/dashboard");
   };
 
   return (
-    <div
-      className="container d-flex justify-content-center align-items-center"
-      style={{ minHeight: "80vh" }}
-    >
-      <div className="card shadow p-4 rounded-4" style={{ width: 420 }}>
-        <h3 className="fw-bold mb-4 text-center">{dict.login}</h3>
+    <div className="auth-page full-center">
+      <div className="auth-card glass">
 
-        {error && <div className="alert alert-danger">{error}</div>}
+        <h2 className="title">ورود به حساب</h2>
+        <p className="subtitle">دوباره خوش آمدی 🌟</p>
 
-        <form onSubmit={handleLogin}>
-          <div className="mb-3">
-            <label className="form-label">{dict.email}</label>
+        {error && <div className="auth-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+
+          <div className="input-group">
+            <span>📧</span>
             <input
               type="email"
-              className="form-control"
+              placeholder="ایمیل"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">{dict.password}</label>
+          <div className="input-group">
+            <span>🔒</span>
             <input
               type="password"
-              className="form-control"
+              placeholder="رمز عبور"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          <button className="btn btn-primary w-100 py-2">
-            {dict.login}
+          <button className="auth-btn" type="submit">
+            ورود
           </button>
-<button
-  className="btn btn-outline-secondary w-100 mt-3"
-  onClick={continueAsGuest}
->
-  Continue as Guest
-</button>
-
-          <div className="text-center mt-3">
-            <small>
-              {dict.no_account}{" "}
-              <Link to="/register">{dict.signup}</Link>
-            </small>
-          </div>
         </form>
+
+        <div className="auth-footer">
+          حساب نداری؟ <Link to="/register">ثبت‌نام کن</Link>
+        </div>
+
       </div>
     </div>
   );

@@ -1,131 +1,58 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
-
-// Pages
-import Home from "./pages/Home";
+import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import Chat from "./pages/Chat";
-import FileManager from "./pages/FileManager";
-import Tools from "./pages/Tools";
-import Summarizer from "./pages/tools/Summarizer";
-import Rewriter from "./pages/tools/Rewriter";
-import Translator from "./pages/tools/Translator";
-import ImageGenerator from "./pages/tools/ImageGenerator";
-import CodingAssistant from "./pages/tools/CodingAssistant";
-import IdeaGenerator from "./pages/tools/IdeaGenerator";
-import TaskAgent from "./pages/tools/TaskAgent";
-import MemoryManager from "./pages/MemoryManager";
-import PersonaManager from "./pages/PersonaManager";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
+import PlansPage from "./pages/Plans";
 
 
-function App() {
+const App = () => {
   return (
-    <BrowserRouter>
-      <Navbar />
+    <AuthProvider>
+      <Router>
+        <Routes>
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/memory" element={<MemoryManager />} />
-        <Route path="/personas" element={<PersonaManager />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route 
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/plans"
+           element={
+            <ProtectedRoute>
+              <PlansPage />
+               </ProtectedRoute>
+                 }
+                 />
 
 
-        {/* Protected */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route path="*" element={<Login />} />
 
-        {/* Tools */}
-        <Route
-          path="/tools"
-          element={
-            <ProtectedRoute>
-              <Tools />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/summarizer"
-          element={
-            <ProtectedRoute>
-              <Summarizer />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/rewriter"
-          element={
-            <ProtectedRoute>
-              <Rewriter />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/translator"
-          element={
-            <ProtectedRoute>
-              <Translator />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/image"
-          element={
-            <ProtectedRoute>
-              <ImageGenerator />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/code"
-          element={
-            <ProtectedRoute>
-              <CodingAssistant />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/ideas"
-          element={
-            <ProtectedRoute>
-              <IdeaGenerator />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tools/agent"
-          element={
-            <ProtectedRoute>
-              <TaskAgent />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Chat is Public (Guest Mode allowed) */}
-        <Route path="/chat" element={<Chat />} />
-
-        {/* Files */}
-        <Route
-          path="/files"
-          element={
-            <ProtectedRoute>
-              <FileManager />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
-}
+};
 
 export default App;
