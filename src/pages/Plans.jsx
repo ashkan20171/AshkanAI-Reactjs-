@@ -1,34 +1,43 @@
 const plans = {
+  guest: {
+    name: "Guest",
+    price: 0,
+    description: "محدود و فقط برای امتحان سرویس",
+    maxMessages: 5,
+    allowImageGen: false,
+    allowCodeAssistant: false,
+    allowTaskAgent: false,
+  },
+
   free: {
     name: "Free",
-    maxMessages: 30,
+    price: 0,
+    description: "پلن رایگان با امکانات محدود",
+    maxMessages: 50,
     allowImageGen: false,
     allowCodeAssistant: true,
-    allowTaskAgent: false
+    allowTaskAgent: false,
   },
 
   pro: {
     name: "Pro",
+    price: 149000,
+    description: "امکانات کامل برای کاربران حرفه‌ای",
     maxMessages: 500,
     allowImageGen: true,
     allowCodeAssistant: true,
-    allowTaskAgent: true
+    allowTaskAgent: true,
   },
 
-  ultimate: {
-    name: "Ultimate",
+  vip: {
+    name: "VIP",
+    price: 349000,
+    description: "دسترسی نامحدود به همه امکانات",
     maxMessages: Infinity,
     allowImageGen: true,
     allowCodeAssistant: true,
-    allowTaskAgent: true
+    allowTaskAgent: true,
   },
-  plugins: {
-  summarize: true,
-  rewrite: true,
-  translate: false,  // فقط برای Pro+
-  explain: true
-}
-
 };
 
 export default plans;

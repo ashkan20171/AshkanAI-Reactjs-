@@ -1,25 +1,29 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import plans from "../pages/Plans"; // اگر اسم فایل plans.js است
+import plans from "../pages/Plans";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  const isGuestUser = {
-  plan: "guest",
-  planDetails: {
-    name: "Guest",
-    maxMessages: 5,
-    allowImageGen: false,
-    allowCodeAssistant: false,
-    allowTaskAgent: false
-  }
-};
-const continueAsGuest = () => {
-  setUser(isGuestUser);
-};
-  // اضافه کردن planDetails به کاربر
+  // کاربر مهمان
+  const guestUser = {
+    plan: "guest",
+    planDetails: {
+      name: "Guest",
+      maxMessages: 5,
+      allowImageGen: false,
+      allowCodeAssistant: false,
+      allowTaskAgent: false
+    }
+  };
+
+  const continueAsGuest = () => {
+    localStorage.setItem("ashkanai_user", JSON.stringify(guestUser));
+    setUser(guestUser);
+  };
+
+  // افزودن planDetails به یوزر
   const enhanceUser = (userObj) => {
     if (!userObj) return null;
 
@@ -29,18 +33,19 @@ const continueAsGuest = () => {
     };
   };
 
+  // لود کاربر از localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem("ashkanai_user");
     if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      setUser(enhanceUser(parsed));
+      setUser(enhanceUser(JSON.parse(savedUser)));
     }
   }, []);
 
+  // ثبت‌نام
   const register = (info) => {
     const users = JSON.parse(localStorage.getItem("ashkanai_users")) || [];
 
-    // اگر پلن مشخص نکرده، پیش‌فرض free
+    // پیش‌فرض کاربر جدید Free است
     const newUser = { ...info, plan: "free" };
 
     users.push(newUser);
@@ -51,6 +56,7 @@ const continueAsGuest = () => {
     setUser(enhanceUser(newUser));
   };
 
+  // لاگین
   const login = (email, password) => {
     const users = JSON.parse(localStorage.getItem("ashkanai_users")) || [];
 
@@ -66,14 +72,22 @@ const continueAsGuest = () => {
     return true;
   };
 
+  // خروج
   const logout = () => {
     localStorage.removeItem("ashkanai_user");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, register, login, logout }}>
-        <AuthContext.Provider value={{ user, register, login, logout, continueAsGuest }}></AuthContext.Provider>
+    <AuthContext.Provider
+      value={{
+        user,
+        register,
+        login,
+        logout,
+        continueAsGuest,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
