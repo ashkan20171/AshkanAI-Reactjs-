@@ -1,42 +1,103 @@
-import { Box, Container, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
+import { Box, Container, Typography, IconButton, Tooltip } from "@mui/material";
+import { useMemo } from "react";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
-
-const guestLimit = 5;
+import { useAuthStore } from "../../store/authStore";
+import { useChatStore } from "../../store/chatStore";
+import { useTranslation } from "react-i18next";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ReplayIcon from "@mui/icons-material/Replay";
+import ThumbUpIcon from "@mui/icons-material/ThumbUp";
+import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import { useSnackbar } from "notistack";
 
 export default function ChatView() {
-  const [messages, setMessages] = useState([
-    { role: "assistant", text: "سلام! من Ashkan AI هستم. چی دوست داری امروز انجام بدیم؟" },
-  ]);
-  const [guestUsed, setGuestUsed] = useState(0);
+  const { t } = useTranslation();
+  const { enqueueSnackbar } = useSnackbar();
 
-  const isGuestLimited = guestUsed >= guestLimit;
+  const plan = useAuthStore((s) => s.plan);
+  const user = useAuthStore((s) => s.user);
+  const usage = useAuthStore((s) => s.usage);
+  const limits = useAuthStore((s) => s.limits());
+  const canSendMessage = useAuthStore((s) => s.canSendMessage);
+  const incMessage = useAuthStore((s) => s.incMessage);
+
+  const activeId = useChatStore((s) => s.activeId);
+  const activeConversation = useChatStore((s) => s.activeConversation());
+  const appendMessage = useChatStore((s) => s.appendMessage);
+  const replaceLastAssistant = useChatStore((s) => s.replaceLastAssistant);
+
+  const messages = activeConversation?.messages || [];
+  const disabled = !canSendMessage();
 
   const helperText = useMemo(() => {
-    if (isGuestLimited) return "محدودیت مهمان پر شد. برای ادامه وارد شوید یا پلن تهیه کنید.";
-    return `حالت مهمان: ${guestLimit - guestUsed} پیام باقی مانده`;
-  }, [guestUsed, isGuestLimited]);
+    if (disabled) return t("guestLimitReached");
+    const left = limits.messagesPerDay - usage.messagesToday;
+    const who = user ? `(${plan.toUpperCase()})` : "(GUEST)";
+    return `${who} ${t("messagesLeft", { count: left })}`;
+  }, [disabled, limits.messagesPerDay, usage.messagesToday, user, plan, t]);
 
   const send = (text) => {
-    setMessages((m) => [...m, { role: "user", text }]);
-    setGuestUsed((x) => x + 1);
+    if (disabled || !activeId) return;
 
-    const demoAnswer =
-      "این پاسخ دموی Ashkan AI هست. مرحله بعدی: بک‌اند + اتصال به مدل AI + مدیریت پلن‌ها و محدودیت واقعی.";
+    appendMessage(activeId, { role: "user", text });
+    incMessage();
 
+    const demoAnswer = t("demoAnswer");
     setTimeout(() => {
-      setMessages((m) => [...m, { role: "assistant", text: demoAnswer }]);
-    }, 400);
+      appendMessage(activeId, { role: "assistant", text: demoAnswer, meta: { liked: 0 } });
+    }, 350);
+  };
+
+  const copyLast = async () => {
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!last) return;
+    try {
+      await navigator.clipboard.writeText(last.text);
+      enqueueSnackbar(t("copy"), { variant: "success" });
+    } catch {
+      enqueueSnackbar("Copy failed", { variant: "error" });
+    }
+  };
+
+  const regenerate = () => {
+    if (!activeId) return;
+    replaceLastAssistant(activeId, t("demoAnswer"));
+    enqueueSnackbar(t("regenerate"), { variant: "info" });
   };
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         <Container maxWidth="md" sx={{ py: 3 }}>
-          <Typography variant="caption" color="text.secondary">
-            Chat • نسخه اولیه UI شبیه ChatGPT
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Typography variant="caption" color="text.secondary">
+              Chat • Conversations • Plan limits
+            </Typography>
+
+            <Box sx={{ display: "flex", gap: 0.5 }}>
+              <Tooltip title={t("copy")}>
+                <IconButton size="small" onClick={copyLast}>
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t("regenerate")}>
+                <IconButton size="small" onClick={regenerate}>
+                  <ReplayIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Like">
+                <IconButton size="small" onClick={() => enqueueSnackbar("👍", { variant: "success" })}>
+                  <ThumbUpIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Dislike">
+                <IconButton size="small" onClick={() => enqueueSnackbar("👎", { variant: "warning" })}>
+                  <ThumbDownIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
 
           <Box sx={{ mt: 2 }}>
             {messages.map((msg, idx) => (
@@ -46,7 +107,7 @@ export default function ChatView() {
         </Container>
       </Box>
 
-      <ChatInput onSend={send} disabled={isGuestLimited} helperText={helperText} />
+      <ChatInput onSend={send} disabled={disabled} helperText={helperText} />
     </Box>
   );
 }

@@ -1,9 +1,12 @@
 import { Box, IconButton, Paper, TextField, Typography } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
 
 export default function ChatInput({ onSend, disabled, helperText }) {
   const [value, setValue] = useState("");
+const { t } = useTranslation();
 
   const submit = () => {
     const v = value.trim();
@@ -32,7 +35,8 @@ export default function ChatInput({ onSend, disabled, helperText }) {
       >
         <TextField
           fullWidth
-          placeholder="پیامت رو بنویس…"
+          placeholder={t("typeMessage")}
+
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
