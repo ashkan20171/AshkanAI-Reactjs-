@@ -7,11 +7,18 @@ import { useUiStore } from "./app/uiStore";
 import { SnackbarProvider } from "notistack";
 import "./i18n";
 import i18n from "./i18n";
+import { useSettingsStore } from "./store/settingsStore";
 
 export default function App() {
   const mode = useUiStore((s) => s.mode);
   const lang = useUiStore((s) => s.lang);
   const direction = useUiStore((s) => s.direction());
+
+  const settings = useSettingsStore((s) => ({
+    fontSize: s.fontSize,
+    density: s.density,
+    glass: s.glass,
+  }));
 
   useEffect(() => {
     i18n.changeLanguage(lang);
@@ -19,7 +26,10 @@ export default function App() {
     document.documentElement.dir = direction;
   }, [lang, direction]);
 
-  const theme = useMemo(() => makeTheme(mode, direction), [mode, direction]);
+  const theme = useMemo(
+    () => makeTheme(mode, direction, settings),
+    [mode, direction, settings.fontSize, settings.density, settings.glass]
+  );
 
   return (
     <ThemeProvider theme={theme}>

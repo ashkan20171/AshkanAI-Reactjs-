@@ -35,11 +35,10 @@ function clipTitle(text) {
 }
 
 function defaultWelcome() {
-  return { role: "assistant", text: "سلام! من Ashkan AI هستم. چی دوست داری امروز انجام بدیم؟" };
+  return { role: "assistant", text: "سلام! من Ashkan AI هستم. چی دوست داری امروز انجام بدیم؟", ts: Date.now() };
 }
 
 function sortChats(conversations) {
-  // pinned first, then most recently updated
   return [...conversations].sort((a, b) => {
     const ap = a.pinned ? 1 : 0;
     const bp = b.pinned ? 1 : 0;
@@ -76,16 +75,9 @@ export const useChatStore = create((set, get) => {
     set((state) => {
       const next = updater(state);
       const merged = { ...state, ...next };
-      // ensure sorted
-      const fixed = {
-        ...merged,
-        conversations: sortChats(merged.conversations),
-      };
+      const fixed = { ...merged, conversations: sortChats(merged.conversations) };
       save(fixed);
-      return {
-        conversations: fixed.conversations,
-        activeId: fixed.activeId,
-      };
+      return { conversations: fixed.conversations, activeId: fixed.activeId };
     });
 
   return {
@@ -134,25 +126,11 @@ export const useChatStore = create((set, get) => {
     deleteChat(id) {
       withPersist((state) => {
         const rest = state.conversations.filter((c) => c.id !== id);
-        if (rest.length === 0) {
-          const fresh = makeInitial();
-          return fresh;
-        }
+        if (rest.length === 0) return makeInitial();
         const nextActive = state.activeId === id ? rest[0].id : state.activeId;
         return { conversations: rest, activeId: nextActive };
       });
     },
-updateLastMessage(id, patch) {
-  withPersist((state) => ({
-    conversations: state.conversations.map((c) => {
-      if (c.id !== id) return c;
-      const msgs = [...c.messages];
-      if (!msgs.length) return c;
-      msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], ...patch };
-      return { ...c, messages: msgs, updatedAt: Date.now() };
-    }),
-  }));
-},
 
     appendMessage(id, msg) {
       withPersist((state) => ({
@@ -162,18 +140,22 @@ updateLastMessage(id, patch) {
           const wasNew = c.title === "New chat";
           const nextMsgs = [...c.messages, msg];
 
-          // auto-title: first user message sets title
           let nextTitle = c.title;
-          if (wasNew && msg.role === "user") {
-            nextTitle = clipTitle(msg.text);
-          }
+          if (wasNew && msg.role === "user") nextTitle = clipTitle(msg.text);
 
-          return {
-            ...c,
-            title: nextTitle,
-            messages: nextMsgs,
-            updatedAt: Date.now(),
-          };
+          return { ...c, title: nextTitle, messages: nextMsgs, updatedAt: Date.now() };
+        }),
+      }));
+    },
+
+    updateLastMessage(id, patch) {
+      withPersist((state) => ({
+        conversations: state.conversations.map((c) => {
+          if (c.id !== id) return c;
+          const msgs = [...c.messages];
+          if (!msgs.length) return c;
+          msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], ...patch };
+          return { ...c, messages: msgs, updatedAt: Date.now() };
         }),
       }));
     },
@@ -185,7 +167,7 @@ updateLastMessage(id, patch) {
           const msgs = [...c.messages];
           for (let i = msgs.length - 1; i >= 0; i--) {
             if (msgs[i].role === "assistant") {
-              msgs[i] = { ...msgs[i], text: newText };
+              msgs[i] = { ...msgs[i], text: newText, ts: Date.now(), pending: false };
               break;
             }
           }
@@ -197,28 +179,37 @@ updateLastMessage(id, patch) {
     search(query) {
       const q = (query || "").trim().toLowerCase();
       if (!q) return get().conversations;
-      return get().conversations.filter((c) => c.title.toLowerCase().includes(q));
+
+      return get().conversations.filter((c) => {
+        if ((c.title || "").toLowerCase().includes(q)) return true;
+        return c.messages?.some((m) => ((m.text || "").toLowerCase().includes(q)));
+      });
     },
 
     exportConversation(id, format = "txt") {
       const conv = get().conversations.find((c) => c.id === id);
       if (!conv) return null;
 
-      if (format === "json") {
-        return JSON.stringify(conv, null, 2);
-      }
+      if (format === "json") return JSON.stringify(conv, null, 2);
 
-      // txt
       const lines = [];
       lines.push(`# ${conv.title}`);
       lines.push("");
       for (const m of conv.messages) {
         const who = m.role === "user" ? "User" : "Assistant";
         lines.push(`${who}:`);
-        lines.push(m.text);
+        lines.push(m.text || "");
         lines.push("");
       }
       return lines.join("\n");
+    },
+
+    exportAll() {
+      return JSON.stringify(
+        { conversations: get().conversations, activeId: get().activeId },
+        null,
+        2
+      );
     },
   };
 });

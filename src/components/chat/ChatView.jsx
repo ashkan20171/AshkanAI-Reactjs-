@@ -1,4 +1,4 @@
-import { Box, Container, Typography, IconButton, Tooltip, Button } from "@mui/material";
+import { Box, Container, Typography, IconButton, Tooltip, Button, Paper } from "@mui/material";
 import { useMemo, useRef, useEffect, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
@@ -11,6 +11,7 @@ import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import StopIcon from "@mui/icons-material/Stop";
 import { useSnackbar } from "notistack";
+import DropZone from "./DropZone"; // اگر مسیرت فرق داره، اصلاحش کن
 
 export default function ChatView() {
   const { t } = useTranslation();
@@ -37,6 +38,9 @@ export default function ChatView() {
 
   const bottomRef = useRef(null);
 
+  // attachments (demo)
+  const [attachments, setAttachments] = useState([]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
@@ -54,12 +58,34 @@ export default function ChatView() {
     return `${who} ${t("messagesLeft", { count: left })}`;
   }, [disabled, limits.messagesPerDay, usage.messagesToday, user, plan, t]);
 
+  const onFiles = (files) => {
+    // demo: فقط نمایش در UI
+    const safe = (files || []).slice(0, 10).map((f) => ({
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      lastModified: f.lastModified,
+    }));
+    setAttachments((prev) => [...safe, ...prev].slice(0, 10));
+    enqueueSnackbar(`Attached: ${safe.map((x) => x.name).join(", ")}`, { variant: "info" });
+  };
+
+  const clearAttachments = () => setAttachments([]);
+
   const send = (text) => {
     if (disabled || !activeId) return;
     if (isTyping) return;
 
-    appendMessage(activeId, { role: "user", text, ts: Date.now() });
+    appendMessage(activeId, {
+      role: "user",
+      text,
+      ts: Date.now(),
+      attachments: attachments.length ? attachments : undefined,
+    });
     incMessage();
+
+    // بعد از ارسال، فایل‌ها ریست شوند (مثل اکثر چت‌ها)
+    if (attachments.length) clearAttachments();
 
     // add pending assistant bubble
     appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true });
@@ -79,12 +105,13 @@ export default function ChatView() {
   const stop = () => {
     if (!activeId) return;
     if (typingTimer.current) clearTimeout(typingTimer.current);
-    // تبدیل pending به یک پاسخ متوقف‌شده
+
     updateLastMessage(activeId, {
       text: "⛔ Stopped.",
       pending: false,
       ts: Date.now(),
     });
+
     setIsTyping(false);
     enqueueSnackbar("Stopped", { variant: "info" });
   };
@@ -119,12 +146,7 @@ export default function ChatView() {
 
             <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
               {isTyping ? (
-                <Button
-                  size="small"
-                  startIcon={<StopIcon />}
-                  onClick={stop}
-                  variant="outlined"
-                >
+                <Button size="small" startIcon={<StopIcon />} onClick={stop} variant="outlined">
                   Stop
                 </Button>
               ) : null}
@@ -134,23 +156,66 @@ export default function ChatView() {
                   <ContentCopyIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+
               <Tooltip title={t("regenerate")}>
                 <IconButton size="small" onClick={regenerate}>
                   <ReplayIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+
               <Tooltip title="Like">
-                <IconButton size="small" onClick={() => enqueueSnackbar("👍", { variant: "success" })}>
+                <IconButton
+                  size="small"
+                  onClick={() => enqueueSnackbar("👍", { variant: "success" })}
+                >
                   <ThumbUpIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+
               <Tooltip title="Dislike">
-                <IconButton size="small" onClick={() => enqueueSnackbar("👎", { variant: "warning" })}>
+                <IconButton
+                  size="small"
+                  onClick={() => enqueueSnackbar("👎", { variant: "warning" })}
+                >
                   <ThumbDownIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
           </Box>
+
+          {/* Dropzone (demo) */}
+          <Box sx={{ mt: 2 }}>
+            <DropZone onFiles={onFiles} />
+          </Box>
+
+          {/* Attachments preview */}
+          {attachments.length ? (
+            <Paper
+              sx={{
+                mt: 2,
+                p: 1.5,
+                bgcolor: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.10)",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography variant="caption" color="text.secondary">
+                  Attachments
+                </Typography>
+                <Button size="small" variant="text" onClick={clearAttachments}>
+                  Clear
+                </Button>
+              </Box>
+
+              <Box sx={{ mt: 1 }}>
+                {attachments.map((f) => (
+                  <Typography key={f.name} variant="body2" sx={{ opacity: 0.9 }}>
+                    {f.name} • {Math.round(f.size / 1024)} KB
+                  </Typography>
+                ))}
+              </Box>
+            </Paper>
+          ) : null}
 
           <Box sx={{ mt: 2 }}>
             {messages.map((msg, idx) => (
