@@ -40,11 +40,15 @@ const { t } = useTranslation();
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
+  const isMac = navigator.platform.toLowerCase().includes("mac");
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+
+  if (mod && e.key === "Enter") {
+    e.preventDefault();
+    submit();
+  }
+}}
+
           multiline
           maxRows={6}
           variant="standard"

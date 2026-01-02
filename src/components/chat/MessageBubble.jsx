@@ -1,6 +1,12 @@
 import { Box, Paper, Typography } from "@mui/material";
 
-export default function MessageBubble({ role, text }) {
+function formatTime(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+export default function MessageBubble({ role, text, ts, pending }) {
   const isUser = role === "user";
 
   return (
@@ -24,8 +30,14 @@ export default function MessageBubble({ role, text }) {
           variant="body1"
           sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}
         >
-          {text}
+          {pending ? "…" : text}
         </Typography>
+
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            {pending ? "typing…" : formatTime(ts)}
+          </Typography>
+        </Box>
       </Paper>
     </Box>
   );

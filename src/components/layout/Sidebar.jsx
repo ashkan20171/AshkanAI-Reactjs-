@@ -23,7 +23,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSnackbar } from "notistack";
 
@@ -57,6 +57,23 @@ function SidebarInner({ onClose }) {
 
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuChatId, setMenuChatId] = useState(null);
+
+  // Ctrl+K / Cmd+K -> focus search
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const isMac = navigator.platform.toLowerCase().includes("mac");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+
+      if (mod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        const el = document.getElementById("sidebar-chat-search");
+        el?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const openMenu = (e, id) => {
     e.stopPropagation();
@@ -170,6 +187,7 @@ function SidebarInner({ onClose }) {
           <Button size="small" variant="text" onClick={() => navigate("/pricing")}>
             {t("pricing")}
           </Button>
+
           {user ? (
             <Button size="small" variant="text" onClick={logout}>
               {t("logout")}
@@ -187,6 +205,7 @@ function SidebarInner({ onClose }) {
           placeholder="Search chats…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          inputProps={{ id: "sidebar-chat-search" }}
           sx={{ mt: 2 }}
         />
       </Box>

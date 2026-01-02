@@ -142,6 +142,17 @@ export const useChatStore = create((set, get) => {
         return { conversations: rest, activeId: nextActive };
       });
     },
+updateLastMessage(id, patch) {
+  withPersist((state) => ({
+    conversations: state.conversations.map((c) => {
+      if (c.id !== id) return c;
+      const msgs = [...c.messages];
+      if (!msgs.length) return c;
+      msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], ...patch };
+      return { ...c, messages: msgs, updatedAt: Date.now() };
+    }),
+  }));
+},
 
     appendMessage(id, msg) {
       withPersist((state) => ({

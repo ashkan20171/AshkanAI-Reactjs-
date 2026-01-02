@@ -1,5 +1,5 @@
-import { Box, Container, Typography, IconButton, Tooltip } from "@mui/material";
-import { useMemo } from "react";
+import { Box, Container, Typography, IconButton, Tooltip, Button } from "@mui/material";
+import { useMemo, useRef, useEffect, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import { useAuthStore } from "../../store/authStore";
@@ -9,6 +9,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ReplayIcon from "@mui/icons-material/Replay";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import StopIcon from "@mui/icons-material/Stop";
 import { useSnackbar } from "notistack";
 
 export default function ChatView() {
@@ -26,9 +27,25 @@ export default function ChatView() {
   const activeConversation = useChatStore((s) => s.activeConversation());
   const appendMessage = useChatStore((s) => s.appendMessage);
   const replaceLastAssistant = useChatStore((s) => s.replaceLastAssistant);
+  const updateLastMessage = useChatStore((s) => s.updateLastMessage);
 
   const messages = activeConversation?.messages || [];
   const disabled = !canSendMessage();
+
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimer = useRef(null);
+
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+    };
+  }, []);
 
   const helperText = useMemo(() => {
     if (disabled) return t("guestLimitReached");
@@ -39,18 +56,41 @@ export default function ChatView() {
 
   const send = (text) => {
     if (disabled || !activeId) return;
+    if (isTyping) return;
 
-    appendMessage(activeId, { role: "user", text });
+    appendMessage(activeId, { role: "user", text, ts: Date.now() });
     incMessage();
 
-    const demoAnswer = t("demoAnswer");
-    setTimeout(() => {
-      appendMessage(activeId, { role: "assistant", text: demoAnswer, meta: { liked: 0 } });
-    }, 350);
+    // add pending assistant bubble
+    appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true });
+    setIsTyping(true);
+
+    // demo response (later: real streaming)
+    typingTimer.current = setTimeout(() => {
+      updateLastMessage(activeId, {
+        text: t("demoAnswer"),
+        pending: false,
+        ts: Date.now(),
+      });
+      setIsTyping(false);
+    }, 800);
+  };
+
+  const stop = () => {
+    if (!activeId) return;
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    // تبدیل pending به یک پاسخ متوقف‌شده
+    updateLastMessage(activeId, {
+      text: "⛔ Stopped.",
+      pending: false,
+      ts: Date.now(),
+    });
+    setIsTyping(false);
+    enqueueSnackbar("Stopped", { variant: "info" });
   };
 
   const copyLast = async () => {
-    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    const last = [...messages].reverse().find((m) => m.role === "assistant" && !m.pending);
     if (!last) return;
     try {
       await navigator.clipboard.writeText(last.text);
@@ -62,6 +102,8 @@ export default function ChatView() {
 
   const regenerate = () => {
     if (!activeId) return;
+    if (isTyping) return;
+
     replaceLastAssistant(activeId, t("demoAnswer"));
     enqueueSnackbar(t("regenerate"), { variant: "info" });
   };
@@ -72,10 +114,21 @@ export default function ChatView() {
         <Container maxWidth="md" sx={{ py: 3 }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Typography variant="caption" color="text.secondary">
-              Chat • Conversations • Plan limits
+              Chat • Conversations • Shortcuts: Ctrl+K / Ctrl+Enter
             </Typography>
 
-            <Box sx={{ display: "flex", gap: 0.5 }}>
+            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+              {isTyping ? (
+                <Button
+                  size="small"
+                  startIcon={<StopIcon />}
+                  onClick={stop}
+                  variant="outlined"
+                >
+                  Stop
+                </Button>
+              ) : null}
+
               <Tooltip title={t("copy")}>
                 <IconButton size="small" onClick={copyLast}>
                   <ContentCopyIcon fontSize="small" />
@@ -101,13 +154,20 @@ export default function ChatView() {
 
           <Box sx={{ mt: 2 }}>
             {messages.map((msg, idx) => (
-              <MessageBubble key={idx} role={msg.role} text={msg.text} />
+              <MessageBubble
+                key={idx}
+                role={msg.role}
+                text={msg.text}
+                ts={msg.ts}
+                pending={msg.pending}
+              />
             ))}
+            <div ref={bottomRef} />
           </Box>
         </Container>
       </Box>
 
-      <ChatInput onSend={send} disabled={disabled} helperText={helperText} />
+      <ChatInput onSend={send} disabled={disabled || isTyping} helperText={helperText} />
     </Box>
   );
 }
