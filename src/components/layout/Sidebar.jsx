@@ -18,15 +18,19 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import CloseIcon from "@mui/icons-material/Close";
+import PushPinIcon from "@mui/icons-material/PushPin";
+import DownloadIcon from "@mui/icons-material/Download";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSnackbar } from "notistack";
 
 function SidebarInner({ onClose }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
 
   const plan = useAuthStore((s) => s.plan);
   const user = useAuthStore((s) => s.user);
@@ -40,6 +44,9 @@ function SidebarInner({ onClose }) {
   const renameChat = useChatStore((s) => s.renameChat);
   const deleteChat = useChatStore((s) => s.deleteChat);
   const search = useChatStore((s) => s.search);
+
+  const pinToggle = useChatStore((s) => s.pinToggle);
+  const exportConversation = useChatStore((s) => s.exportConversation);
 
   const total = limits.messagesPerDay;
   const used = usage.messagesToday;
@@ -70,6 +77,39 @@ function SidebarInner({ onClose }) {
 
   const doDelete = () => {
     if (menuChatId) deleteChat(menuChatId);
+    closeMenu();
+  };
+
+  const doPin = () => {
+    if (menuChatId) pinToggle(menuChatId);
+    closeMenu();
+  };
+
+  const download = (content, filename, type) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const doExportTxt = () => {
+    if (!menuChatId) return;
+    const content = exportConversation(menuChatId, "txt");
+    if (!content) return;
+    download(content, "ashkan-ai-chat.txt", "text/plain;charset=utf-8");
+    enqueueSnackbar("Export TXT", { variant: "success" });
+    closeMenu();
+  };
+
+  const doExportJson = () => {
+    if (!menuChatId) return;
+    const content = exportConversation(menuChatId, "json");
+    if (!content) return;
+    download(content, "ashkan-ai-chat.json", "application/json;charset=utf-8");
+    enqueueSnackbar("Export JSON", { variant: "success" });
     closeMenu();
   };
 
@@ -169,10 +209,14 @@ function SidebarInner({ onClose }) {
               }}
               sx={{ borderRadius: 2, mx: 1, my: 0.5 }}
             >
-              <ListItemText
-                primary={c.title}
-                primaryTypographyProps={{ noWrap: true }}
-              />
+              <ListItemText primary={c.title} primaryTypographyProps={{ noWrap: true }} />
+
+              {c.pinned ? (
+                <Tooltip title="Pinned">
+                  <PushPinIcon fontSize="small" sx={{ opacity: 0.85, mx: 0.5 }} />
+                </Tooltip>
+              ) : null}
+
               <Tooltip title="More">
                 <IconButton size="small" onClick={(e) => openMenu(e, c.id)}>
                   <MoreHorizIcon fontSize="small" />
@@ -184,8 +228,24 @@ function SidebarInner({ onClose }) {
       </Box>
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+        <MenuItem onClick={doPin}>
+          <PushPinIcon fontSize="small" style={{ marginInlineEnd: 8 }} />
+          Pin / Unpin
+        </MenuItem>
+
         <MenuItem onClick={doRename}>{t("rename")}</MenuItem>
         <MenuItem onClick={doDelete}>{t("delete")}</MenuItem>
+
+        <Divider />
+
+        <MenuItem onClick={doExportTxt}>
+          <DownloadIcon fontSize="small" style={{ marginInlineEnd: 8 }} />
+          Export TXT
+        </MenuItem>
+        <MenuItem onClick={doExportJson}>
+          <DownloadIcon fontSize="small" style={{ marginInlineEnd: 8 }} />
+          Export JSON
+        </MenuItem>
       </Menu>
 
       <Divider />
