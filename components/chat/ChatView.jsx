@@ -12,9 +12,12 @@ import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import StopIcon from "@mui/icons-material/Stop";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useSnackbar } from "notistack";
-import DropZone from "./DropZone";
+import DropZone from "./DropZone"; // اگر مسیرت فرق داره، اصلاحش کن
 import { mockStream } from "../../services/ai/mockStream";
 import { makeMockAnswer } from "../../services/ai/mockBrain";
+import ToolsPanel from "./ToolsPanel";
+import { tools } from "../../services/tools/registry";
+import { runMockAgent } from "../../services/agents/mockAgent";
 
 export default function ChatView() {
   const { t, i18n } = useTranslation();
@@ -28,17 +31,12 @@ export default function ChatView() {
   const incMessage = useAuthStore((s) => s.incMessage);
 
   const activeId = useChatStore((s) => s.activeId);
-
-  // ✅ مهم: مستقیم به messages سابسکرایب شو
-  const messages = useChatStore((s) => {
-    const conv = s.conversations.find((c) => c.id === s.activeId);
-    return conv?.messages || [];
-  });
-
+  const activeConversation = useChatStore((s) => s.activeConversation());
   const appendMessage = useChatStore((s) => s.appendMessage);
   const replaceLastAssistant = useChatStore((s) => s.replaceLastAssistant);
   const updateLastMessage = useChatStore((s) => s.updateLastMessage);
 
+  const messages = activeConversation?.messages || [];
   const disabled = !canSendMessage();
 
   const [isTyping, setIsTyping] = useState(false);
@@ -48,14 +46,17 @@ export default function ChatView() {
 
   const bottomRef = useRef(null);
 
+  // attachments (demo)
   const [attachments, setAttachments] = useState([]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, messages[messages.length - 1]?.text]);
+  }, [messages.length]);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const helperText = useMemo(() => {
@@ -66,6 +67,7 @@ export default function ChatView() {
   }, [disabled, limits.messagesPerDay, usage.messagesToday, user, plan, t]);
 
   const onFiles = (files) => {
+    // demo: فقط نمایش در UI
     const safe = (files || []).slice(0, 10).map((f) => ({
       name: f.name,
       size: f.size,
@@ -78,9 +80,63 @@ export default function ChatView() {
 
   const clearAttachments = () => setAttachments([]);
 
+  const runTool = async (toolId) => {
+    if (!activeId) return;
+
+    const tool = tools.find((x) => x.id === toolId);
+    if (!tool) return;
+
+    const lastText = [...messages].reverse().find((m) => m.text)?.text || "";
+
+    appendMessage(activeId, {
+      role: "assistant",
+      text: `🛠️ ${tool.id}...\n`,
+      ts: Date.now(),
+      pending: true,
+      stopped: false,
+    });
+
+    try {
+      const out = await tool.run({ text: lastText });
+      updateLastMessage(activeId, { text: out, pending: false, stopped: false, ts: Date.now() });
+    } catch (e) {
+      updateLastMessage(activeId, {
+        text: `⚠️ Tool error: ${e?.message || "Unknown"}`,
+        pending: false,
+        stopped: false,
+        ts: Date.now(),
+      });
+    }
+  };
+
+  const runAgent = async () => {
+    if (!activeId) return;
+
+    const lastUser = [...messages].reverse().find((m) => m.role === "user")?.text || lastUserText || "";
+    if (!lastUser) return;
+
+    const hasFiles = attachments.length > 0;
+
+    appendMessage(activeId, { role: "assistant", text: "🤖 Agent started...\n", ts: Date.now() });
+
+    await runMockAgent({
+      topic: lastUser,
+      hasFiles,
+      onStep: (step) => {
+        appendMessage(activeId, {
+          role: "assistant",
+          text: `### ${step.title}\n${step.text}`,
+          ts: Date.now(),
+        });
+      },
+    });
+  };
+
+
   const runStreamingIntoLastAssistant = async ({ userText }) => {
     if (!activeId) return;
 
+    // stop previous stream
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -137,8 +193,10 @@ export default function ChatView() {
     });
     incMessage();
 
+    // بعد از ارسال، فایل‌ها ریست شوند (مثل اکثر چت‌ها)
     if (attachments.length) clearAttachments();
 
+    // add pending assistant bubble (this must stay last while streaming)
     appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true, stopped: false });
 
     await runStreamingIntoLastAssistant({ userText: trimmed });
@@ -152,7 +210,9 @@ export default function ChatView() {
   };
 
   const continueAnswer = async () => {
-    if (!activeId || isTyping || !lastUserText) return;
+    if (!activeId) return;
+    if (isTyping) return;
+    if (!lastUserText) return;
 
     appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true, stopped: false });
     await runStreamingIntoLastAssistant({ userText: lastUserText });
@@ -170,8 +230,11 @@ export default function ChatView() {
   };
 
   const regenerate = async () => {
-    if (!activeId || isTyping || !lastUserText) return;
+    if (!activeId) return;
+    if (isTyping) return;
+    if (!lastUserText) return;
 
+    // reset last assistant message, then stream into it
     replaceLastAssistant(activeId, "");
     updateLastMessage(activeId, { pending: true, stopped: false, ts: Date.now() });
     await runStreamingIntoLastAssistant({ userText: lastUserText });
@@ -225,10 +288,16 @@ export default function ChatView() {
             </Box>
           </Box>
 
+          {/* Dropzone (demo) */}
           <Box sx={{ mt: 2 }}>
             <DropZone onFiles={onFiles} />
           </Box>
 
+          <Box sx={{ mt: 2 }}>
+            <ToolsPanel onRunTool={runTool} disabled={disabled || isTyping} />
+          </Box>
+
+          {/* Attachments preview */}
           {attachments.length ? (
             <Paper
               sx={{
@@ -258,9 +327,8 @@ export default function ChatView() {
           ) : null}
 
           <Box sx={{ mt: 2 }}>
-            {/* ✅ key باید msg.id باشد */}
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} role={msg.role} text={msg.text} ts={msg.ts} pending={msg.pending} />
+            {messages.map((msg, idx) => (
+              <MessageBubble key={idx} role={msg.role} text={msg.text} ts={msg.ts} pending={msg.pending} />
             ))}
             <div ref={bottomRef} />
           </Box>
