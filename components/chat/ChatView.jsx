@@ -28,12 +28,17 @@ export default function ChatView() {
   const incMessage = useAuthStore((s) => s.incMessage);
 
   const activeId = useChatStore((s) => s.activeId);
-  const activeConversation = useChatStore((s) => s.activeConversation());
+
+  // ✅ مهم: مستقیم به messages سابسکرایب شو
+  const messages = useChatStore((s) => {
+    const conv = s.conversations.find((c) => c.id === s.activeId);
+    return conv?.messages || [];
+  });
+
   const appendMessage = useChatStore((s) => s.appendMessage);
   const replaceLastAssistant = useChatStore((s) => s.replaceLastAssistant);
   const updateLastMessage = useChatStore((s) => s.updateLastMessage);
 
-  const messages = activeConversation?.messages || [];
   const disabled = !canSendMessage();
 
   const [isTyping, setIsTyping] = useState(false);
@@ -43,18 +48,14 @@ export default function ChatView() {
 
   const bottomRef = useRef(null);
 
-  // attachments (demo)
   const [attachments, setAttachments] = useState([]);
 
-  // ✅ خیلی مهم: حین استریم هم اسکرول پایین بماند
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, messages[messages.length - 1]?.text]);
 
   useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
+    return () => abortRef.current?.abort();
   }, []);
 
   const helperText = useMemo(() => {
@@ -80,7 +81,6 @@ export default function ChatView() {
   const runStreamingIntoLastAssistant = async ({ userText }) => {
     if (!activeId) return;
 
-    // stop previous stream
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -97,13 +97,7 @@ export default function ChatView() {
         text: full,
         onToken: (tok) => {
           acc += tok;
-          // ✅ اینجا باید باعث رندر فوری بشه (chatStore ایمیوتبل شد)
-          updateLastMessage(activeId, {
-            text: acc,
-            pending: true,
-            stopped: false,
-            ts: Date.now(),
-          });
+          updateLastMessage(activeId, { text: acc, pending: true, stopped: false, ts: Date.now() });
         },
       });
 
@@ -145,7 +139,6 @@ export default function ChatView() {
 
     if (attachments.length) clearAttachments();
 
-    // ✅ assistant pending پیام آخر می‌شود
     appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true, stopped: false });
 
     await runStreamingIntoLastAssistant({ userText: trimmed });
@@ -159,9 +152,7 @@ export default function ChatView() {
   };
 
   const continueAnswer = async () => {
-    if (!activeId) return;
-    if (isTyping) return;
-    if (!lastUserText) return;
+    if (!activeId || isTyping || !lastUserText) return;
 
     appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true, stopped: false });
     await runStreamingIntoLastAssistant({ userText: lastUserText });
@@ -179,11 +170,8 @@ export default function ChatView() {
   };
 
   const regenerate = async () => {
-    if (!activeId) return;
-    if (isTyping) return;
-    if (!lastUserText) return;
+    if (!activeId || isTyping || !lastUserText) return;
 
-    // reset last assistant message, then stream into it
     replaceLastAssistant(activeId, "");
     updateLastMessage(activeId, { pending: true, stopped: false, ts: Date.now() });
     await runStreamingIntoLastAssistant({ userText: lastUserText });
@@ -270,7 +258,7 @@ export default function ChatView() {
           ) : null}
 
           <Box sx={{ mt: 2 }}>
-            {/* ✅ مهم: key باید msg.id باشد */}
+            {/* ✅ key باید msg.id باشد */}
             {messages.map((msg) => (
               <MessageBubble key={msg.id} role={msg.role} text={msg.text} ts={msg.ts} pending={msg.pending} />
             ))}
