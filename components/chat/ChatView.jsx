@@ -10,11 +10,14 @@ import ReplayIcon from "@mui/icons-material/Replay";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import StopIcon from "@mui/icons-material/Stop";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useSnackbar } from "notistack";
-import DropZone from "./DropZone"; // اگر مسیرت فرق داره، اصلاحش کن
+import DropZone from "./DropZone";
+import { mockStream } from "../../services/ai/mockStream";
+import { makeMockAnswer } from "../../services/ai/mockBrain";
 
 export default function ChatView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { enqueueSnackbar } = useSnackbar();
 
   const plan = useAuthStore((s) => s.plan);
@@ -34,20 +37,23 @@ export default function ChatView() {
   const disabled = !canSendMessage();
 
   const [isTyping, setIsTyping] = useState(false);
-  const typingTimer = useRef(null);
+  const abortRef = useRef(null);
+  const [lastUserText, setLastUserText] = useState(null);
+  const [lastStopped, setLastStopped] = useState(false);
 
   const bottomRef = useRef(null);
 
   // attachments (demo)
   const [attachments, setAttachments] = useState([]);
 
+  // ✅ خیلی مهم: حین استریم هم اسکرول پایین بماند
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, messages[messages.length - 1]?.text]);
 
   useEffect(() => {
     return () => {
-      if (typingTimer.current) clearTimeout(typingTimer.current);
+      abortRef.current?.abort();
     };
   }, []);
 
@@ -59,7 +65,6 @@ export default function ChatView() {
   }, [disabled, limits.messagesPerDay, usage.messagesToday, user, plan, t]);
 
   const onFiles = (files) => {
-    // demo: فقط نمایش در UI
     const safe = (files || []).slice(0, 10).map((f) => ({
       name: f.name,
       size: f.size,
@@ -72,48 +77,94 @@ export default function ChatView() {
 
   const clearAttachments = () => setAttachments([]);
 
-  const send = (text) => {
+  const runStreamingIntoLastAssistant = async ({ userText }) => {
+    if (!activeId) return;
+
+    // stop previous stream
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setIsTyping(true);
+    setLastStopped(false);
+
+    const full = makeMockAnswer(userText, i18n.language);
+    let acc = "";
+
+    try {
+      await mockStream({
+        signal: controller.signal,
+        text: full,
+        onToken: (tok) => {
+          acc += tok;
+          // ✅ اینجا باید باعث رندر فوری بشه (chatStore ایمیوتبل شد)
+          updateLastMessage(activeId, {
+            text: acc,
+            pending: true,
+            stopped: false,
+            ts: Date.now(),
+          });
+        },
+      });
+
+      updateLastMessage(activeId, { text: acc, pending: false, stopped: false, ts: Date.now() });
+    } catch (e) {
+      if (e?.name === "AbortError") {
+        updateLastMessage(activeId, { text: acc, pending: false, stopped: true, ts: Date.now() });
+        setLastStopped(true);
+        return;
+      }
+
+      updateLastMessage(activeId, {
+        text: `⚠️ Error: ${e?.message || "Unknown error"}`,
+        pending: false,
+        stopped: false,
+        ts: Date.now(),
+      });
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const send = async (text) => {
     if (disabled || !activeId) return;
     if (isTyping) return;
 
+    const trimmed = (text || "").trim();
+    if (!trimmed) return;
+
+    setLastUserText(trimmed);
+
     appendMessage(activeId, {
       role: "user",
-      text,
+      text: trimmed,
       ts: Date.now(),
       attachments: attachments.length ? attachments : undefined,
     });
     incMessage();
 
-    // بعد از ارسال، فایل‌ها ریست شوند (مثل اکثر چت‌ها)
     if (attachments.length) clearAttachments();
 
-    // add pending assistant bubble
-    appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true });
-    setIsTyping(true);
+    // ✅ assistant pending پیام آخر می‌شود
+    appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true, stopped: false });
 
-    // demo response (later: real streaming)
-    typingTimer.current = setTimeout(() => {
-      updateLastMessage(activeId, {
-        text: t("demoAnswer"),
-        pending: false,
-        ts: Date.now(),
-      });
-      setIsTyping(false);
-    }, 800);
+    await runStreamingIntoLastAssistant({ userText: trimmed });
   };
 
   const stop = () => {
     if (!activeId) return;
-    if (typingTimer.current) clearTimeout(typingTimer.current);
-
-    updateLastMessage(activeId, {
-      text: "⛔ Stopped.",
-      pending: false,
-      ts: Date.now(),
-    });
-
-    setIsTyping(false);
+    abortRef.current?.abort();
+    abortRef.current = null;
     enqueueSnackbar("Stopped", { variant: "info" });
+  };
+
+  const continueAnswer = async () => {
+    if (!activeId) return;
+    if (isTyping) return;
+    if (!lastUserText) return;
+
+    appendMessage(activeId, { role: "assistant", text: "", ts: Date.now(), pending: true, stopped: false });
+    await runStreamingIntoLastAssistant({ userText: lastUserText });
   };
 
   const copyLast = async () => {
@@ -127,11 +178,16 @@ export default function ChatView() {
     }
   };
 
-  const regenerate = () => {
+  const regenerate = async () => {
     if (!activeId) return;
     if (isTyping) return;
+    if (!lastUserText) return;
 
-    replaceLastAssistant(activeId, t("demoAnswer"));
+    // reset last assistant message, then stream into it
+    replaceLastAssistant(activeId, "");
+    updateLastMessage(activeId, { pending: true, stopped: false, ts: Date.now() });
+    await runStreamingIntoLastAssistant({ userText: lastUserText });
+
     enqueueSnackbar(t("regenerate"), { variant: "info" });
   };
 
@@ -149,6 +205,10 @@ export default function ChatView() {
                 <Button size="small" startIcon={<StopIcon />} onClick={stop} variant="outlined">
                   Stop
                 </Button>
+              ) : lastStopped ? (
+                <Button size="small" startIcon={<PlayArrowIcon />} onClick={continueAnswer} variant="outlined">
+                  Continue
+                </Button>
               ) : null}
 
               <Tooltip title={t("copy")}>
@@ -158,37 +218,29 @@ export default function ChatView() {
               </Tooltip>
 
               <Tooltip title={t("regenerate")}>
-                <IconButton size="small" onClick={regenerate}>
+                <IconButton size="small" onClick={regenerate} disabled={!lastUserText || isTyping}>
                   <ReplayIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
 
               <Tooltip title="Like">
-                <IconButton
-                  size="small"
-                  onClick={() => enqueueSnackbar("👍", { variant: "success" })}
-                >
+                <IconButton size="small" onClick={() => enqueueSnackbar("👍", { variant: "success" })}>
                   <ThumbUpIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
 
               <Tooltip title="Dislike">
-                <IconButton
-                  size="small"
-                  onClick={() => enqueueSnackbar("👎", { variant: "warning" })}
-                >
+                <IconButton size="small" onClick={() => enqueueSnackbar("👎", { variant: "warning" })}>
                   <ThumbDownIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
           </Box>
 
-          {/* Dropzone (demo) */}
           <Box sx={{ mt: 2 }}>
             <DropZone onFiles={onFiles} />
           </Box>
 
-          {/* Attachments preview */}
           {attachments.length ? (
             <Paper
               sx={{
@@ -218,14 +270,9 @@ export default function ChatView() {
           ) : null}
 
           <Box sx={{ mt: 2 }}>
-            {messages.map((msg, idx) => (
-              <MessageBubble
-                key={idx}
-                role={msg.role}
-                text={msg.text}
-                ts={msg.ts}
-                pending={msg.pending}
-              />
+            {/* ✅ مهم: key باید msg.id باشد */}
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} role={msg.role} text={msg.text} ts={msg.ts} pending={msg.pending} />
             ))}
             <div ref={bottomRef} />
           </Box>

@@ -3,6 +3,7 @@ import { create } from "zustand";
 const LS_KEY = "ashkan_ai_chats_v2";
 
 function uid() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
 
@@ -28,6 +29,15 @@ function save(state) {
   } catch {}
 }
 
+// ✅ Debounced persist to avoid UI blocking during streaming
+let saveTimer = null;
+function saveDebounced(state, delay = 250) {
+  try {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => save(state), delay);
+  } catch {}
+}
+
 function clipTitle(text) {
   const t = (text || "").trim().replace(/\s+/g, " ");
   if (!t) return "New chat";
@@ -35,7 +45,14 @@ function clipTitle(text) {
 }
 
 function defaultWelcome() {
-  return { role: "assistant", text: "سلام! من Ashkan AI هستم. چی دوست داری امروز انجام بدیم؟", ts: Date.now() };
+  return {
+    id: uid(),
+    role: "assistant",
+    text: "سلام! من Ashkan AI هستم. چی دوست داری امروز انجام بدیم؟",
+    ts: Date.now(),
+    pending: false,
+    stopped: false,
+  };
 }
 
 function sortChats(conversations) {
@@ -76,7 +93,10 @@ export const useChatStore = create((set, get) => {
       const next = updater(state);
       const merged = { ...state, ...next };
       const fixed = { ...merged, conversations: sortChats(merged.conversations) };
-      save(fixed);
+
+      // ✅ debounce save to keep UI responsive during frequent updates (streaming)
+      saveDebounced(fixed);
+
       return { conversations: fixed.conversations, activeId: fixed.activeId };
     });
 
@@ -138,10 +158,18 @@ export const useChatStore = create((set, get) => {
           if (c.id !== id) return c;
 
           const wasNew = c.title === "New chat";
-          const nextMsgs = [...c.messages, msg];
+
+          const safeMsg = {
+            id: msg?.id || uid(),
+            pending: false,
+            stopped: false,
+            ...msg,
+          };
+
+          const nextMsgs = [...c.messages, safeMsg];
 
           let nextTitle = c.title;
-          if (wasNew && msg.role === "user") nextTitle = clipTitle(msg.text);
+          if (wasNew && safeMsg.role === "user") nextTitle = clipTitle(safeMsg.text);
 
           return { ...c, title: nextTitle, messages: nextMsgs, updatedAt: Date.now() };
         }),
@@ -152,8 +180,10 @@ export const useChatStore = create((set, get) => {
       withPersist((state) => ({
         conversations: state.conversations.map((c) => {
           if (c.id !== id) return c;
+
           const msgs = [...c.messages];
           if (!msgs.length) return c;
+
           msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], ...patch };
           return { ...c, messages: msgs, updatedAt: Date.now() };
         }),
@@ -164,13 +194,21 @@ export const useChatStore = create((set, get) => {
       withPersist((state) => ({
         conversations: state.conversations.map((c) => {
           if (c.id !== id) return c;
+
           const msgs = [...c.messages];
           for (let i = msgs.length - 1; i >= 0; i--) {
             if (msgs[i].role === "assistant") {
-              msgs[i] = { ...msgs[i], text: newText, ts: Date.now(), pending: false };
+              msgs[i] = {
+                ...msgs[i],
+                text: newText,
+                ts: Date.now(),
+                pending: false,
+                stopped: false,
+              };
               break;
             }
           }
+
           return { ...c, messages: msgs, updatedAt: Date.now() };
         }),
       }));
@@ -182,7 +220,7 @@ export const useChatStore = create((set, get) => {
 
       return get().conversations.filter((c) => {
         if ((c.title || "").toLowerCase().includes(q)) return true;
-        return c.messages?.some((m) => ((m.text || "").toLowerCase().includes(q)));
+        return c.messages?.some((m) => (m.text || "").toLowerCase().includes(q));
       });
     },
 
@@ -205,11 +243,7 @@ export const useChatStore = create((set, get) => {
     },
 
     exportAll() {
-      return JSON.stringify(
-        { conversations: get().conversations, activeId: get().activeId },
-        null,
-        2
-      );
+      return JSON.stringify({ conversations: get().conversations, activeId: get().activeId }, null, 2);
     },
   };
 });

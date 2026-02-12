@@ -26,11 +26,9 @@ export default function MessageBubble({ role, text, ts, pending }) {
           border: "1px solid rgba(255,255,255,0.08)",
         }}
       >
-        <Typography
-          variant="body1"
-          sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}
-        >
-          {pending ? "…" : text}
+        <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>
+          {text}
+          {pending ? "▍" : ""}
         </Typography>
 
         <Box sx={{ mt: 1 }}>
