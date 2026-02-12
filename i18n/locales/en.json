@@ -1,0 +1,22 @@
+{
+  "appName": "Ashkan AI",
+  "newChat": "New chat",
+  "chats": "Chats",
+  "pricing": "Plans",
+  "login": "Login / Sign up",
+  "logout": "Logout",
+  "typeMessage": "Type your message…",
+  "guestLimitReached": "Your plan limit is reached. Upgrade to continue.",
+  "messagesLeft": "{{count}} messages left today",
+  "demoAnswer": "This is a demo answer from Ashkan AI. Next: real AI + history + tools.",
+  "settings": "Settings",
+  "language": "Language",
+  "theme": "Theme",
+  "dark": "Dark",
+  "light": "Light",
+  "model": "Model",
+  "copy": "Copy",
+  "regenerate": "Regenerate",
+  "rename": "Rename",
+  "delete": "Delete"
+}

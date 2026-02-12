@@ -1,0 +1,22 @@
+{
+  "appName": "Ashkan AI",
+  "newChat": "چت جدید",
+  "chats": "چت‌ها",
+  "pricing": "پلن‌ها",
+  "login": "ورود / ثبت‌نام",
+  "logout": "خروج",
+  "typeMessage": "پیامت رو بنویس…",
+  "guestLimitReached": "محدودیت پلن شما پر شد. برای ادامه پلن را ارتقا دهید.",
+  "messagesLeft": "{{count}} پیام باقی مانده امروز",
+  "demoAnswer": "این پاسخ دموی Ashkan AI است. مرحله بعد: اتصال به هوش مصنوعی واقعی + تاریخچه + ابزارها.",
+  "settings": "تنظیمات",
+  "language": "زبان",
+  "theme": "پوسته",
+  "dark": "تیره",
+  "light": "روشن",
+  "model": "مدل",
+  "copy": "کپی",
+  "regenerate": "تولید دوباره",
+  "rename": "تغییر نام",
+  "delete": "حذف"
+}
