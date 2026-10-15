@@ -1,49 +1,42 @@
-# Ashkan AI
+# Ashkan AI — React Chat Workspace
 
-A frontend AI chat UI demo built with **React**, **Vite**, and **MUI**.  
-This project is inspired by modern conversational interfaces and focuses on creating a clean, responsive, and intuitive chat experience.
+A bilingual (Persian RTL / English LTR) AI-chat interface built with React, Vite, Material UI, Zustand and i18next.
 
-## 📖 Overview
+> **Demo application:** Replies are generated locally by a mock responder. There is no real AI backend, account authentication server, payment processing or file analysis. Never enter sensitive information into the demo.
 
-Ashkan AI is a demo user interface designed to simulate a ChatGPT-style experience.  
-The goal of this project is to showcase frontend skills in building conversational layouts, reusable UI components, and responsive interaction design.
+## Run locally
 
-This project is currently a **UI-only frontend demo** and does not include backend AI integration.
+Requirements: Node.js 20+ and npm.
 
-## ✨ Key Features
-
-- **Chat-style interface** inspired by modern AI assistants
-- **Responsive layout** for desktop and mobile screens
-- **Component-based architecture** with reusable UI elements
-- **MUI design system** for consistent styling and faster development
-- **Clean visual structure** focused on readability and user flow
-
-## 🛠️ Tech Stack
-
-- **Framework:** React
-- **Build Tool:** Vite
-- **UI Library:** Material UI (MUI)
-- **Styling:** MUI system / component-based styling
-- **Type:** Frontend demo
-
-## 🎨 Design Focus
-
-This project emphasizes:
-
-- **Clarity:** Keeping the chat UI simple and readable
-- **Modernity:** Using a clean interface similar to contemporary AI products
-- **Responsiveness:** Ensuring the layout adapts to different screen sizes
-- **Usability:** Presenting a familiar conversation flow for users
-
-## 💻 Getting Started
-
-### Prerequisites
-- Node.js
-- npm
-
-### Installation
 ```bash
-git clone https://github.com/ashkan20171/AshkanAI-Reactjs-.git
-cd AshkanAI-Reactjs-
-npm install
+npm ci
 npm run dev
+```
+
+Production build: `npm run build` and `npm run preview`.
+
+## Improvements in this edition
+
+- Removed duplicated legacy source trees, `.git` history and `node_modules` from the distribution.
+- Fixed unstable Zustand selector returning a new object on each render in `App.jsx`.
+- Replaced static chat placeholder with language-aware contextual mock answers.
+- Added visible demo disclosure and updated regeneration behavior.
+
+## Production roadmap
+
+Implement a server-side AI proxy with authentication, per-user rate limiting, secrets stored only on the server, streaming cancellation, secure file handling, persistence, tests and accessibility checks before production deployment.
+
+## Stack
+React 18 · Vite 5 · Material UI 5 · Zustand · i18next
+
+## Security
+LocalStorage chat data is not encrypted. Do not use real customer data in this demonstration.
+
+## Stage 2 — UI and reliability
+- Stable language direction derived from reactive state (no function selector in Zustand).
+- Responsive demo badge, updated violet/teal color palette and keyboard focus indicators.
+- Client-side mobile navigation (no full page refresh).
+- Demo-only attachment labels and reactive bilingual demo disclaimer.
+- Reduced-motion support and consolidated global CSS.
+
+**Important:** Chat replies remain simulated. Uploaded attachments are metadata-only and are not sent to a model. Authentication and pricing are demonstration features; do not use this build as a production service.

@@ -47,12 +47,15 @@ function SidebarInner({ onClose }) {
 
   const pinToggle = useChatStore((s) => s.pinToggle);
   const exportConversation = useChatStore((s) => s.exportConversation);
+  const exportAll = useChatStore((s) => s.exportAll);
+  const importAll = useChatStore((s) => s.importAll);
 
   const total = limits.messagesPerDay;
   const used = usage.messagesToday;
   const pct = Math.min(100, Math.round((used / total) * 100));
 
   const [q, setQ] = useState("");
+  const [backupError, setBackupError] = useState("");
   const chats = search(q);
 
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -142,6 +145,20 @@ function SidebarInner({ onClose }) {
       }}
     >
       <Box sx={{ p: 2 }}>
+        <Box sx={{ display: "flex", gap: 1, mb: 1, flexWrap: "wrap" }}>
+          <Button size="small" variant="outlined" onClick={() => download(exportAll(), "ashkan-ai-backup.json", "application/json")}>{t("backup", { defaultValue: "Backup" })}</Button>
+          <Button size="small" variant="outlined" component="label">{t("restore", { defaultValue: "Restore" })}
+            <input hidden type="file" accept="application/json,.json" onChange={async (e) => {
+              const file = e.target.files?.[0]; e.target.value = "";
+              if (!file) return;
+              if (file.size > 5 * 1024 * 1024) { setBackupError("File exceeds 5 MB"); return; }
+              const ok = importAll(await file.text());
+              setBackupError(ok ? "" : "Invalid backup file");
+              enqueueSnackbar(ok ? "Backup restored" : "Invalid backup", { variant: ok ? "success" : "error" });
+            }} />
+          </Button>
+        </Box>
+        {backupError && <Typography color="error" variant="caption">{backupError}</Typography>}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Button
             fullWidth

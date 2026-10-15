@@ -12,13 +12,12 @@ import { useSettingsStore } from "./store/settingsStore";
 export default function App() {
   const mode = useUiStore((s) => s.mode);
   const lang = useUiStore((s) => s.lang);
-  const direction = useUiStore((s) => s.direction());
+  const direction = lang === "fa" ? "rtl" : "ltr";
 
-  const settings = useSettingsStore((s) => ({
-    fontSize: s.fontSize,
-    density: s.density,
-    glass: s.glass,
-  }));
+  const fontSize = useSettingsStore((s) => s.fontSize);
+  const density = useSettingsStore((s) => s.density);
+  const glass = useSettingsStore((s) => s.glass);
+  const settings = useMemo(() => ({ fontSize, density, glass }), [fontSize, density, glass]);
 
   useEffect(() => {
     i18n.changeLanguage(lang);

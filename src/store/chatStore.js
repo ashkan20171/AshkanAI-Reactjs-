@@ -84,7 +84,7 @@ export const useChatStore = create((set, get) => {
     persisted?.conversations?.length
       ? {
           conversations: persisted.conversations,
-          activeId: persisted.activeId || persisted.conversations[0]?.id,
+          activeId: persisted.conversations.some((c) => c.id === persisted.activeId) ? persisted.activeId : persisted.conversations[0]?.id,
         }
       : makeInitial();
 
@@ -240,6 +240,20 @@ export const useChatStore = create((set, get) => {
         lines.push("");
       }
       return lines.join("\n");
+    },
+
+    importAll(raw) {
+      let parsed;
+      try { parsed = JSON.parse(raw); } catch { return false; }
+      if (!Array.isArray(parsed?.conversations) || parsed.conversations.length > 300) return false;
+      const valid = parsed.conversations.every((c) =>
+        typeof c.id === "string" && typeof c.title === "string" &&
+        Array.isArray(c.messages) && c.messages.length <= 2000 &&
+        c.messages.every((m) => ["user", "assistant"].includes(m.role) && typeof m.text === "string")
+      );
+      if (!valid || !parsed.conversations.length) return false;
+      withPersist(() => ({ conversations: parsed.conversations, activeId: parsed.conversations.some((c) => c.id === parsed.activeId) ? parsed.activeId : parsed.conversations[0].id }));
+      return true;
     },
 
     exportAll() {

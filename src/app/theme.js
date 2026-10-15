@@ -27,7 +27,8 @@ export const makeTheme = (mode = "dark", direction = "rtl", settings = defaultSe
         default: mode === "dark" ? "#070A12" : "#F6F7FB",
         paper: paperBg,
       },
-      primary: { main: "#6EA8FE" },
+      primary: { main: mode === "dark" ? "#A78BFA" : "#6D28D9" },
+      secondary: { main: "#2DD4BF" },
       text: {
         primary: mode === "dark" ? "#EAF0FF" : "#101828",
         secondary: mode === "dark" ? "#9AA4B2" : "#475467",

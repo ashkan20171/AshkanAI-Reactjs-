@@ -9,13 +9,14 @@ import {
   MenuItem,
   Tooltip,
   Select,
+  Chip,
   FormControl,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import MenuIcon from "@mui/icons-material/Menu";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useUiStore } from "../../app/uiStore";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +24,7 @@ import SettingsDialog from "../settings/SettingsDialog";
 
 export default function Header({ onOpenSidebar }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const mode = useUiStore((s) => s.mode);
   const setMode = useUiStore((s) => s.setMode);
@@ -74,6 +76,7 @@ export default function Header({ onOpenSidebar }) {
             </Select>
           </FormControl>
 
+          <Chip label={lang === "fa" ? "نسخه نمایشی" : "DEMO"} size="small" color="warning" variant="outlined" sx={{ display: { xs: "none", md: "inline-flex" } }} />
           <Box sx={{ flex: 1 }} />
 
           <Button
@@ -142,7 +145,7 @@ export default function Header({ onOpenSidebar }) {
             <MenuItem
               onClick={() => {
                 setAnchorEl(null);
-                window.location.href = "/pricing";
+                navigate("/pricing");
               }}
               sx={{ display: { xs: "flex", sm: "none" } }}
             >
@@ -152,7 +155,7 @@ export default function Header({ onOpenSidebar }) {
             <MenuItem
               onClick={() => {
                 setAnchorEl(null);
-                window.location.href = "/login";
+                navigate("/login");
               }}
               sx={{ display: { xs: "flex", sm: "none" } }}
             >
