@@ -127,6 +127,10 @@ export const useChatStore = create((set, get) => {
       });
     },
 
+    toggleFavorite(id) {
+      withPersist((state) => ({ conversations: state.conversations.map((c) => c.id === id ? { ...c, favorite: !c.favorite } : c) }));
+    },
+
     pinToggle(id) {
       withPersist((state) => ({
         conversations: state.conversations.map((c) =>
@@ -229,6 +233,7 @@ export const useChatStore = create((set, get) => {
       if (!conv) return null;
 
       if (format === "json") return JSON.stringify(conv, null, 2);
+      if (format === "md") return [`# ${conv.title}`, ...conv.messages.map((m) => `\n## ${m.role === "user" ? "User" : "Assistant"}\n\n${m.text || ""}`)].join("\n");
 
       const lines = [];
       lines.push(`# ${conv.title}`);

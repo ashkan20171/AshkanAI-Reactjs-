@@ -7,7 +7,7 @@ export default function AppLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <Box sx={{ display: "flex", height: "100dvh", overflow: "hidden" }}>
       <Sidebar
         variant="desktop"
       />

@@ -10,11 +10,14 @@ import {
   Divider,
 } from "@mui/material";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import { useAuthStore } from "../store/authStore";
 
 export default function Login() {
+  const { i18n } = useTranslation();
+  const fa = i18n.language.startsWith("fa");
   const navigate = useNavigate();
   const location = useLocation();
   const login = useAuthStore((s) => s.login);
@@ -26,8 +29,8 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const title = useMemo(
-    () => (mode === "login" ? "ورود به Ashkan AI" : "ثبت‌نام در Ashkan AI"),
-    [mode]
+    () => (mode === "login" ? (fa ? "ورود به Ashkan AI" : "Sign in to Ashkan AI") : (fa ? "ثبت‌نام در Ashkan AI" : "Create your account")),
+    [mode, fa]
   );
 
   const submit = () => {
@@ -65,7 +68,7 @@ export default function Login() {
             {title}
           </Typography>
           <Typography color="text.secondary" gutterBottom>
-            حالت فعلی دمو است (بعداً به بک‌اند وصل می‌کنیم).
+            {fa ? "ورود و ثبت‌نام در حال حاضر صرفاً نمایشی است؛ رمز عبور در سرور بررسی نمی‌شود." : "Demo authentication only: passwords are not verified by a server."}
           </Typography>
 
           <Divider sx={{ my: 2, opacity: 0.2 }} />

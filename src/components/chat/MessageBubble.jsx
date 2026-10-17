@@ -1,4 +1,5 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, IconButton, Tooltip } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 function formatTime(ts) {
   if (!ts) return "";
@@ -33,10 +34,11 @@ export default function MessageBubble({ role, text, ts, pending }) {
           {pending ? "…" : text}
         </Typography>
 
-        <Box sx={{ mt: 1 }}>
+        <Box sx={{ mt: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
           <Typography variant="caption" color="text.secondary">
             {pending ? "typing…" : formatTime(ts)}
           </Typography>
+          {!pending && text && <Tooltip title="Copy message"><IconButton size="small" aria-label="Copy message" onClick={() => navigator.clipboard?.writeText(text).catch(() => {})}><ContentCopyIcon fontSize="inherit" /></IconButton></Tooltip>}
         </Box>
       </Paper>
     </Box>

@@ -1,12 +1,13 @@
 import { Box, IconButton, Paper, TextField, Typography } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 
-export default function ChatInput({ onSend, disabled, helperText }) {
+export default function ChatInput({ onSend, disabled, helperText, suggestedPrompt, onPromptUsed }) {
   const [value, setValue] = useState("");
 const { t } = useTranslation();
+  useEffect(() => { if (suggestedPrompt) { setValue(suggestedPrompt); } }, [suggestedPrompt]);
 
   const submit = () => {
     const v = value.trim();

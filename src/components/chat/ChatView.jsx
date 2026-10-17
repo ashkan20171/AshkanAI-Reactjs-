@@ -11,6 +11,8 @@ import ReplayIcon from "@mui/icons-material/Replay";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import StopIcon from "@mui/icons-material/Stop";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import { Chip, Stack } from "@mui/material";
 import { useSnackbar } from "notistack";
 import DropZone from "./DropZone"; // اگر مسیرت فرق داره، اصلاحش کن
 
@@ -41,6 +43,8 @@ export default function ChatView() {
   const liveEnabled = import.meta.env.VITE_AI_MODE === "live";
 
   const bottomRef = useRef(null);
+  const [draftPrompt, setDraftPrompt] = useState("");
+  const suggestions = i18n.language === "fa" ? ["یک برنامه یادگیری React پیشنهاد بده", "این ایده را به طرح کسب‌وکار تبدیل کن", "برای مصاحبه شغلی برنامه‌نویسی آماده‌ام کن"] : ["Create a React learning plan", "Turn my idea into a business plan", "Help me prepare for a developer interview"];
 
   // attachments (demo)
   const [attachments, setAttachments] = useState([]);
@@ -78,7 +82,7 @@ export default function ChatView() {
   const clearAttachments = () => setAttachments([]);
 
   const send = async (text) => {
-    if (disabled || !activeId) return;
+    if (disabled || !activeId || !text?.trim()) return;
     if (isTyping) return;
 
     appendMessage(activeId, {
@@ -149,14 +153,33 @@ export default function ChatView() {
     }
   };
 
-  const regenerate = () => {
+  const regenerate = async () => {
     if (!activeId) return;
     if (isTyping) return;
 
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     if (!lastUser) return;
-    replaceLastAssistant(activeId, makeMockAnswer(lastUser.text, i18n.language));
-    enqueueSnackbar(t("regenerate"), { variant: "info" });
+    if (!liveEnabled) {
+      replaceLastAssistant(activeId, makeMockAnswer(lastUser.text, i18n.language));
+      enqueueSnackbar(t("regenerate"), { variant: "info" });
+      return;
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setIsTyping(true);
+    replaceLastAssistant(activeId, i18n.language === "fa" ? "در حال تولید مجدد…" : "Regenerating…");
+    try {
+      const history = messages.filter((m) => !m.pending).slice(0, -1).slice(-20).map((m) => ({ role: m.role, content: m.text }));
+      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history }), signal: controller.signal });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      replaceLastAssistant(activeId, data.reply);
+    } catch (error) {
+      replaceLastAssistant(activeId, controller.signal.aborted ? "Stopped" : `Error: ${error.message}`);
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -207,6 +230,12 @@ export default function ChatView() {
             </Box>
           </Box>
 
+          {messages.filter((m) => m.role === "user").length === 0 && (
+            <Box sx={{ my: 3, p: 2.5, borderRadius: 3, background: "linear-gradient(125deg, rgba(106,78,210,.16), rgba(17,184,172,.09))", border: "1px solid rgba(128,128,180,.2)" }}>
+              <Typography variant="h6" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}><AutoAwesomeIcon color="primary" />{i18n.language === "fa" ? "از کجا شروع کنیم؟" : "What shall we explore?"}</Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>{suggestions.map((suggestion) => <Chip key={suggestion} label={suggestion} onClick={() => setDraftPrompt(suggestion)} sx={{ height: "auto", minHeight: 34, "& .MuiChip-label": { whiteSpace: "normal", py: 0.75 } }} />)}</Stack>
+            </Box>
+          )}
           {/* Dropzone (demo) */}
           <Box sx={{ mt: 2 }}>
             <DropZone onFiles={onFiles} />
@@ -256,7 +285,7 @@ export default function ChatView() {
         </Container>
       </Box>
 
-      <ChatInput onSend={send} disabled={disabled || isTyping} helperText={helperText} />
+      <ChatInput onSend={(value) => { setDraftPrompt(""); return send(value); }} suggestedPrompt={draftPrompt} onPromptUsed={() => setDraftPrompt("")} disabled={disabled || isTyping} helperText={helperText} />
     </Box>
   );
 }

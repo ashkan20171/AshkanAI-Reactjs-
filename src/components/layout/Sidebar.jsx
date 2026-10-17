@@ -20,6 +20,9 @@ import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import CloseIcon from "@mui/icons-material/Close";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import DownloadIcon from "@mui/icons-material/Download";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
+import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useNavigate } from "react-router-dom";
@@ -46,6 +49,7 @@ function SidebarInner({ onClose }) {
   const search = useChatStore((s) => s.search);
 
   const pinToggle = useChatStore((s) => s.pinToggle);
+  const toggleFavorite = useChatStore((s) => s.toggleFavorite);
   const exportConversation = useChatStore((s) => s.exportConversation);
   const exportAll = useChatStore((s) => s.exportAll);
   const importAll = useChatStore((s) => s.importAll);
@@ -56,7 +60,8 @@ function SidebarInner({ onClose }) {
 
   const [q, setQ] = useState("");
   const [backupError, setBackupError] = useState("");
-  const chats = search(q);
+  const [filter, setFilter] = useState("all");
+  const chats = search(q).filter((c) => filter === "all" || (filter === "favorites" && c.favorite) || (filter === "pinned" && c.pinned));
 
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuChatId, setMenuChatId] = useState(null);
@@ -97,6 +102,11 @@ function SidebarInner({ onClose }) {
 
   const doDelete = () => {
     if (menuChatId) deleteChat(menuChatId);
+    closeMenu();
+  };
+
+  const doFavorite = () => {
+    if (menuChatId) toggleFavorite(menuChatId);
     closeMenu();
   };
 
@@ -216,6 +226,11 @@ function SidebarInner({ onClose }) {
           )}
         </Box>
 
+        <ToggleButtonGroup size="small" exclusive fullWidth value={filter} onChange={(_, value) => { if (value) setFilter(value); }} sx={{ mt: 2 }} aria-label="Conversation filters">
+          <ToggleButton value="all">{t("all", { defaultValue: "All" })}</ToggleButton>
+          <ToggleButton value="favorites">{t("favorites", { defaultValue: "Favorites" })}</ToggleButton>
+          <ToggleButton value="pinned">{t("pinned", { defaultValue: "Pinned" })}</ToggleButton>
+        </ToggleButtonGroup>
         <TextField
           size="small"
           fullWidth
@@ -247,6 +262,7 @@ function SidebarInner({ onClose }) {
             >
               <ListItemText primary={c.title} primaryTypographyProps={{ noWrap: true }} />
 
+              {c.favorite ? <StarIcon fontSize="small" sx={{ color: "warning.main", mx: 0.5 }} /> : null}
               {c.pinned ? (
                 <Tooltip title="Pinned">
                   <PushPinIcon fontSize="small" sx={{ opacity: 0.85, mx: 0.5 }} />
@@ -269,6 +285,7 @@ function SidebarInner({ onClose }) {
           Pin / Unpin
         </MenuItem>
 
+        <MenuItem onClick={doFavorite}><StarBorderIcon fontSize="small" sx={{ mr: 1 }} />{t("toggleFavorite", { defaultValue: "Toggle favorite" })}</MenuItem>
         <MenuItem onClick={doRename}>{t("rename")}</MenuItem>
         <MenuItem onClick={doDelete}>{t("delete")}</MenuItem>
 
